@@ -87,6 +87,19 @@ h1 { font-size: 1.9rem; }
 .profile-card .sub { color: #6b6b80; font-size: .95rem; }
 .profile-card .empty-buddy { font-size: 4rem; }
 
+/* ---------- เลือกวิชา ---------- */
+.subject-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
+.subject-card {
+  background: var(--card); border-radius: var(--radius); padding: 16px 10px;
+  text-align: center; cursor: pointer; box-shadow: var(--shadow);
+  border: 4px solid transparent; transition: transform .12s;
+}
+.subject-card:active { transform: scale(.96); }
+.subject-card.done { border-color: var(--green); }
+.subject-card .s-emoji { font-size: 2.8rem; line-height: 1.1; }
+.subject-card .s-name { font-size: 1.15rem; font-weight: 800; margin-top: 4px; }
+.subject-card .s-prog { font-size: .82rem; color: #6b6b80; margin-top: 2px; }
+
 /* ---------- เลือก Buddy ---------- */
 .buddy-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 16px 0; }
 .buddy-opt {
@@ -209,6 +222,18 @@ h1 { font-size: 1.9rem; }
 .sort-bin .drop { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
 .sort-bin .drop span { background: var(--green); color: #fff; font-weight: 700; padding: 4px 10px; border-radius: 999px; font-size: .95rem; }
 .sort-bin .drop span.bad { background: var(--pink); }
+
+/* เรียงลำดับ (order) */
+.order-answer {
+  min-height: 52px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+  align-items: center; background: rgba(255,255,255,.65); border: 3px dashed var(--green);
+  border-radius: 16px; padding: 10px; margin-bottom: 14px;
+}
+.order-answer:empty::before { content: "แตะคำมาเรียงตรงนี้"; color: #a8a8ba; font-weight: 600; }
+.order-tok {
+  background: var(--green); color: #fff; font-weight: 800; font-size: 1.1rem;
+  padding: 8px 14px; border-radius: 999px; cursor: pointer; box-shadow: 0 4px 0 rgba(0,0,0,.12);
+}
 
 /* ---------- feedback ---------- */
 .feedback { border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px; box-shadow: var(--shadow); font-weight: 700; }

@@ -19,6 +19,7 @@
   // ---------- state ----------
   var save = loadSave();
   var current = null;   // ชื่อโปรไฟล์ที่เลือกอยู่ (Kaka/Sheva)
+  var curQuiz = null;   // วิชาที่เลือกอยู่
   var session = null;   // การเล่นด่านปัจจุบัน
   var root = document.getElementById("app");
   var audioCtx = null;
@@ -162,7 +163,7 @@
     }
     if (!p.buddy) { screenBuddyPick(); return; }
     dailyCheck(p);
-    screenMap();
+    screenSubjects();
   }
 
   // ---------- เลือก Buddy ----------
@@ -191,7 +192,7 @@
       if (!chosen) return;
       p.buddy = chosen; persist();
       dailyCheck(p);
-      screenMap();
+      screenSubjects();
     };
   }
 
@@ -207,6 +208,35 @@
     setTimeout(function () { toast("🔥 เข้าเล่นวันที่ " + p.streak.count + " ได้ +" + bonus + " 🪙"); soundReward(); }, 400);
   }
 
+  // ---------- หน้าเลือกวิชา ----------
+  function screenSubjects() {
+    var p = profile(current);
+    var list = quizzesFor(current);
+    var cards = list.map(function (q) {
+      var levels = levelsOf(q), done = 0, stars = 0;
+      levels.forEach(function (_, idx) { var r = levelRecord(p, q.id, idx); if (r.done) done++; stars += r.stars; });
+      var allDone = done === levels.length;
+      return '<div class="subject-card' + (allDone ? " done" : "") + '" data-qid="' + q.id + '">' +
+        '<div class="s-emoji">' + q.emoji + '</div>' +
+        '<div class="s-name">' + esc(q.subject) + '</div>' +
+        '<div class="s-prog">' + (done > 0 ? "ผ่าน " + done + "/" + levels.length + " · ⭐" + stars : "แตะเริ่มเล่น!") + '</div></div>';
+    }).join("");
+    root.innerHTML = hudHTML(p, "profile") +
+      '<h1>เลือกวิชา 📚</h1>' +
+      '<p class="center muted">' + esc(current) + ' จะทบทวนวิชาไหนดี?</p>' +
+      '<div class="subject-grid">' + cards + '</div>' +
+      '<button class="btn big pink" data-shop="1">🎁 ตู้สะสมสติกเกอร์</button>';
+    wireBack();
+    $all(".subject-card").forEach(function (el) {
+      el.onclick = function () {
+        var qid = el.getAttribute("data-qid");
+        curQuiz = list.filter(function (q) { return q.id === qid; })[0];
+        screenMap();
+      };
+    });
+    $("[data-shop]").onclick = screenShop;
+  }
+
   // ---------- แผนที่ด่าน ----------
   function levelRecord(p, quizId, idx) {
     var q = p.levels[quizId] || {};
@@ -215,7 +245,7 @@
 
   function screenMap() {
     var p = profile(current);
-    var quiz = quizzesFor(current)[0];       // นำร่อง: 1 วิชา/คน
+    var quiz = curQuiz;                       // วิชาที่เลือกจากหน้าเลือกวิชา
     var levels = levelsOf(quiz);
     var b = window.BUDDIES[p.buddy];
 
@@ -242,7 +272,7 @@
         '<div class="stars">🔁</div></div>'
       : '';
 
-    root.innerHTML = hudHTML(p, "profile") +
+    root.innerHTML = hudHTML(p, "subjects") +
       '<div class="world-head"><div class="big-emoji buddy-bounce">' + quiz.emoji + '</div>' +
       '<h2>' + esc(quiz.worldName) + '</h2>' +
       '<p class="muted">' + esc(quiz.subject) + ' · ' + esc(quiz.grade) + ' · สอบครั้งที่ ' + quiz.exam + '</p></div>' +
@@ -275,7 +305,7 @@
   }
 
   // ---------- แสดงคำถาม ----------
-  var TAGS = { mc: "เลือกคำตอบ", fill: "เติมคำ", sort: "จำแนกลงกล่อง" };
+  var TAGS = { mc: "เลือกคำตอบ", fill: "เติมคำ", sort: "จำแนกลงกล่อง", order: "เรียงลำดับ" };
 
   function renderQuestion() {
     var p = profile(current);
@@ -291,6 +321,7 @@
     if (q.type === "mc") body += renderMC(q);
     else if (q.type === "fill") body += renderFill(q);
     else if (q.type === "sort") body += renderSort(q);
+    else if (q.type === "order") body += renderOrder(q);
     body += '</div><div id="answerArea"></div>';
 
     root.innerHTML = head + body;
@@ -298,6 +329,7 @@
     if (q.type === "mc") wireMC(q);
     else if (q.type === "fill") wireFill(q);
     else if (q.type === "sort") wireSort(q);
+    else if (q.type === "order") wireOrder(q);
   }
 
   // ----- MC -----
@@ -471,6 +503,48 @@
     };
   }
 
+  // ----- ORDER (เรียงคำเป็นประโยค) -----
+  function renderOrder(q) {
+    var toks = shuffle(q.seq);
+    var bank = toks.map(function (w) {
+      return '<button class="word-chip" data-word="' + esc(w) + '">' + esc(w) + '</button>';
+    }).join("");
+    return '<div class="q-prompt">' + esc(q.prompt) + '</div>' +
+      '<p class="muted" style="text-align:center;margin:6px 0">แตะคำเรียงให้เป็นประโยคที่ถูก</p>' +
+      '<div class="order-answer" id="orderAns"></div>' +
+      '<div class="word-bank">' + bank + '</div>' +
+      '<button class="btn big green" id="checkOrder" disabled style="margin-top:14px">ตรวจคำตอบ ✓</button>';
+  }
+  function wireOrder(q) {
+    var ansEl = $("#orderAns");
+    var placed = []; // [{word, chip, span}]
+    function refresh() { $("#checkOrder").disabled = placed.length < q.seq.length; }
+    $all(".word-chip").forEach(function (chip) {
+      chip.onclick = function () {
+        if (chip.classList.contains("used")) return;
+        chip.classList.add("used");
+        var w = chip.getAttribute("data-word");
+        var span = document.createElement("span");
+        span.className = "order-tok"; span.textContent = w;
+        var rec = { word: w, chip: chip, span: span };
+        span.onclick = function () {
+          if ($("#checkOrder").style.display === "none") return; // ตรวจแล้วห้ามแก้
+          chip.classList.remove("used");
+          var i = placed.indexOf(rec); if (i >= 0) placed.splice(i, 1);
+          span.remove(); refresh();
+        };
+        placed.push(rec); ansEl.appendChild(span); refresh();
+      };
+    });
+    $("#checkOrder").onclick = function () {
+      var got = placed.map(function (r) { return r.word; });
+      var ok = got.length === q.seq.length && got.every(function (w, i) { return w === q.seq[i]; });
+      $all(".word-chip").forEach(function (c) { c.disabled = true; });
+      $("#checkOrder").style.display = "none";
+      answered(ok, q, "ประโยคที่ถูกคือ <b>" + esc(q.seq.join(" ")) + "</b>");
+    };
+  }
+
   // ---------- หลังตอบ (ทุกชนิดเรียกอันนี้) ----------
   function answered(ok, q, correctLine) {
     var p = profile(current);
@@ -574,7 +648,7 @@
         '<span class="nm">' + (have ? esc(s.name) : "???") + '</span></div>';
     }).join("");
     var got = p.stickers.length, all = window.STICKERS.length;
-    root.innerHTML = hudHTML(p, "map") +
+    root.innerHTML = hudHTML(p, "subjects") +
       '<div class="shop-top">' +
       '<h2>🎁 ตู้สะสมสติกเกอร์</h2>' +
       '<p>สะสมได้แล้ว <b>' + got + ' / ' + all + '</b> ชิ้น</p>' +
@@ -604,7 +678,7 @@
     confetti(70); soundReward();
 
     var rarityTxt = { common: "ธรรมดา", rare: "หายาก ✨", gold: "ทองคำ 🌟" }[sticker.rarity];
-    root.innerHTML = hudHTML(p, "map") +
+    root.innerHTML = hudHTML(p, "subjects") +
       '<div class="q-card gacha-pop">' +
       '<div class="em">' + sticker.emoji + '</div>' +
       '<h2>' + (dup ? "ได้ซ้ำ!" : "ได้สติกเกอร์ใหม่!") + '</h2>' +
@@ -623,7 +697,8 @@
     $all("[data-back]").forEach(function (el) {
       el.onclick = function () {
         var to = el.getAttribute("data-back");
-        if (to === "profile") { current = null; screenProfile(); }
+        if (to === "profile") { current = null; curQuiz = null; screenProfile(); }
+        else if (to === "subjects") { curQuiz = null; screenSubjects(); }
         else if (to === "map") screenMap();
       };
     });
