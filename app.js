@@ -86,6 +86,15 @@
     p.ledger.push({ type: type, amount: amount, note: note, date: todayStr() });
   }
 
+  // รีเซ็ตความคืบหน้าของเด็กคนนี้ (เก็บ buddy ไว้) — ใช้ตอนพ่อทดสอบเสร็จ
+  function resetProgress(p) {
+    p.coins = 0; p.xp = 0; p.stickers = [];
+    p.streak = { count: 0, lastDay: null };
+    p.levels = {}; p.wrong = {};
+    p.starBank = 0; p.ledger = [];
+    persist();
+  }
+
   function buddyStage(p) { return p.xp < 60 ? 1 : (p.xp < 180 ? 2 : 3); }
 
   // ---------- ข้อมูล quiz ----------
@@ -841,6 +850,12 @@
       '<h2 style="font-size:1.15rem">📜 ประวัติทั้งหมด</h2>' +
       '<div class="ledger">' + ledgerRowsHTML(p, 0) + '</div></div>' +
 
+      '<div class="q-card">' +
+      '<h2 style="font-size:1.15rem">♻️ รีเซ็ตความคืบหน้า</h2>' +
+      '<p class="muted">ล้างด่าน/ดาว/เหรียญ/สติกเกอร์ของ ' + esc(current) + ' ให้เริ่มนับใหม่ (เก็บเพื่อนคู่ใจไว้) — ใช้ตอนทดสอบเสร็จแล้ว</p>' +
+      '<button class="btn orange" id="resetProg">รีเซ็ตความคืบหน้าของ ' + esc(current) + '</button>' +
+      '</div>' +
+
       '<button class="btn big blue" id="changePin">เปลี่ยน PIN</button>' +
       '<button class="btn big" data-back="reward">⟵ กลับหน้าของรางวัล</button>';
     wireBack();
@@ -864,6 +879,18 @@
       family.reward.cost = cost;
       saveFamily();
       toast("บันทึกของรางวัลแล้ว ✓");
+    };
+    $("#resetProg").onclick = function () {
+      var b = $("#resetProg");
+      if (b.getAttribute("data-armed")) {
+        resetProgress(profile(current));
+        toast("รีเซ็ตความคืบหน้าของ " + current + " แล้ว เริ่มใหม่ได้เลย ✓");
+        screenSubjects();
+        return;
+      }
+      b.setAttribute("data-armed", "1");
+      b.classList.remove("orange"); b.classList.add("pink");
+      b.textContent = "⚠️ แน่ใจ? กดอีกครั้งเพื่อล้าง";
     };
     $("#changePin").onclick = function () {
       family.pin = null; saveFamily();
