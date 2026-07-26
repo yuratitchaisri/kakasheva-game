@@ -16,8 +16,11 @@
   var CHEERS = ["เก่งมากกก!", "สุดยอด!", "ถูกต้องงง!", "เยี่ยมเลย!", "ปังมาก!", "ฉลาดจัง!"];
   var COMFORTS = ["ไม่เป็นไรน้า", "ลองใหม่นะ เกือบแล้ว!", "ค่อยๆ คิดนะ", "ครั้งหน้าต้องได้!"];
 
+  var FAM_KEY = "ksl_family_v1";
+
   // ---------- state ----------
   var save = loadSave();
+  var family = loadFamily();
   var current = null;   // ชื่อโปรไฟล์ที่เลือกอยู่ (Kaka/Sheva)
   var curQuiz = null;   // วิชาที่เลือกอยู่
   var session = null;   // การเล่นด่านปัจจุบัน
@@ -43,6 +46,16 @@
   }
   function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
 
+  // ---------- family config (PIN + รางวัล ใช้ร่วมทั้งบ้าน) ----------
+  function loadFamily() {
+    try {
+      var f = JSON.parse(localStorage.getItem(FAM_KEY));
+      if (f && f.reward) return f;
+    } catch (e) {}
+    return { pin: null, reward: { emoji: "🎁", name: "ของเล่น 100 บาท", cost: 10 } };
+  }
+  function saveFamily() { try { localStorage.setItem(FAM_KEY, JSON.stringify(family)); } catch (e) {} }
+
   function profile(name) {
     if (!save[name]) {
       save[name] = { buddy: null, coins: 0, xp: 0, stickers: [], streak: { count: 0, lastDay: null }, levels: {}, wrong: {} };
@@ -53,7 +66,24 @@
     if (!p.streak) p.streak = { count: 0, lastDay: null };
     if (!p.levels) p.levels = {};
     if (!p.wrong) p.wrong = {};
+    // ---- ธนาคารดาว: migration จากดาวเดิมที่มีอยู่ ----
+    if (p.starBank === undefined) {
+      var sum = 0;
+      Object.keys(p.levels).forEach(function (qid) {
+        var lv = p.levels[qid];
+        Object.keys(lv).forEach(function (i) { sum += (lv[i].stars || 0); });
+      });
+      p.starBank = sum;
+      p.ledger = sum > 0 ? [{ type: "game", amount: sum, note: "ดาวสะสมเดิม", date: todayStr() }] : [];
+    }
+    if (!p.ledger) p.ledger = [];
     return p;
+  }
+
+  // เพิ่ม/ลดดาวในธนาคาร + บันทึก ledger
+  function addStars(p, amount, type, note) {
+    p.starBank = Math.max(0, p.starBank + amount);
+    p.ledger.push({ type: type, amount: amount, note: note, date: todayStr() });
   }
 
   function buddyStage(p) { return p.xp < 60 ? 1 : (p.xp < 180 ? 2 : 3); }
@@ -120,6 +150,7 @@
       (backTo ? '<button class="back" data-back="' + backTo + '">⟵</button>' : '') +
       '<span class="who">' + (b ? '<span class="mini-buddy buddy-svg">' + b.svg(buddyStage(p)) + '</span>' : '') + esc(current) + '</span>' +
       '<span class="spacer"></span>' +
+      '<span class="chip stars">⭐ ' + p.starBank + '</span>' +
       '<span class="chip streak">🔥 ' + p.streak.count + '</span>' +
       '<span class="chip coins">🪙 ' + p.coins + '</span>' +
       '</div>';
@@ -224,8 +255,12 @@
     root.innerHTML = hudHTML(p, "profile") +
       '<h1>เลือกวิชา 📚</h1>' +
       '<p class="center muted">' + esc(current) + ' จะทบทวนวิชาไหนดี?</p>' +
+      rewardBannerHTML(p) +
       '<div class="subject-grid">' + cards + '</div>' +
-      '<button class="btn big pink" data-shop="1">🎁 ตู้สะสมสติกเกอร์</button>';
+      '<div class="btn-row">' +
+      '<button class="btn green" data-reward="1">🎁 ของรางวัล</button>' +
+      '<button class="btn blue" data-shop="1">🧸 สติกเกอร์</button>' +
+      '</div>';
     wireBack();
     $all(".subject-card").forEach(function (el) {
       el.onclick = function () {
@@ -235,6 +270,19 @@
       };
     });
     $("[data-shop]").onclick = screenShop;
+    $all("[data-reward]").forEach(function (el) { el.onclick = screenReward; });
+  }
+
+  // แบนเนอร์ความคืบหน้าดาว → รางวัล (ใช้ในหน้าเลือกวิชา)
+  function rewardBannerHTML(p) {
+    var cost = family.reward.cost, have = p.starBank;
+    var pct = Math.min(100, Math.round((have / cost) * 100));
+    var msg = have >= cost
+      ? '🎉 แลก ' + esc(family.reward.emoji + " " + family.reward.name) + ' ได้แล้ว!'
+      : 'อีก <b>' + (cost - have) + '</b> ⭐ ได้ ' + esc(family.reward.emoji + " " + family.reward.name) + '!';
+    return '<div class="reward-banner" data-reward="1">' +
+      '<div class="rb-top"><span>⭐ ดาวสะสม <b>' + have + '</b> / ' + cost + '</span><span>' + msg + '</span></div>' +
+      '<div class="progress-bar"><i style="width:' + pct + '%"></i></div></div>';
   }
 
   // ---------- แผนที่ด่าน ----------
@@ -603,13 +651,22 @@
     (session.rightIds || []).forEach(function (id) { delete wrongSet[id]; });
     p.wrong[quiz.id] = Object.keys(wrongSet).map(Number);
 
-    // บันทึกด่าน (เฉพาะด่านปกติ ไม่ใช่ทบทวน)
+    // บันทึกด่าน + เข้าธนาคารดาว (เฉพาะด่านปกติ ไม่ใช่ทบทวน)
+    var starDelta = 0, crossed = false;
     if (!session.review) {
       if (!p.levels[quiz.id]) p.levels[quiz.id] = {};
       var rec = p.levels[quiz.id][session.levelIdx] || { stars: 0, done: false };
+      var prevStars = rec.stars;
       rec.stars = Math.max(rec.stars, stars);
       if (stars >= 1) rec.done = true;
       p.levels[quiz.id][session.levelIdx] = rec;
+      // ดาวเข้า bank เฉพาะส่วนที่ดีขึ้นจริง (เล่นซ้ำได้เท่าเดิม = ไม่เพิ่ม)
+      starDelta = rec.stars - prevStars;
+      if (starDelta > 0) {
+        var beforeBank = p.starBank;
+        addStars(p, starDelta, "game", "ด่าน " + (session.levelIdx + 1) + " " + quiz.subject);
+        if (beforeBank < family.reward.cost && p.starBank >= family.reward.cost) crossed = true;
+      }
     }
     persist();
 
@@ -620,17 +677,28 @@
 
     if (stars >= 1) { confetti(80); soundReward(); }
 
+    var starLine = starDelta > 0
+      ? '<div class="reward-line star">+' + starDelta + ' ⭐ เข้าธนาคารดาว! (มี ' + p.starBank + ' ⭐)</div>'
+      : '<div class="reward-line muted-line">⭐ ดาวสะสม: ' + p.starBank + '</div>';
+    var crossLine = crossed
+      ? '<div class="cross-banner">🎉 ดาวครบแลก ' + esc(family.reward.emoji + " " + family.reward.name) + ' ได้แล้ว! บอกคุณพ่อคุณแม่เลย</div>'
+      : '';
+
     root.innerHTML = hudHTML(p, "map") +
       '<div class="result-card">' +
       '<span class="buddy-svg buddy-happy" style="width:130px;height:130px">' + buddy.svg(buddyStage(p)) + '</span>' +
       '<h2>' + msg + '</h2>' +
       '<div class="result-stars">' + starHTML + '</div>' +
       '<p>ตอบถูก ' + session.correct + ' / ' + total + ' ข้อ</p>' +
-      '<div class="reward-line">🪙 เหรียญตอนนี้: ' + p.coins + '</div>' +
+      starLine + crossLine +
+      '<div class="reward-line muted-line">🪙 เหรียญ: ' + p.coins + '</div>' +
       '<button class="btn big green" id="toMap">กลับแผนที่ 🗺️</button>' +
-      '<button class="btn big pink" id="toShop">🎁 ไปเปิดกล่องสุ่ม</button>' +
+      '<button class="btn big pink" id="toReward">🎁 ดูของรางวัล</button>' +
+      '<button class="btn big blue" id="toShop">🧸 ตู้สะสมสติกเกอร์</button>' +
       '</div>';
+    if (crossed) { confetti(120); soundReward(); }
     $("#toMap").onclick = screenMap;
+    $("#toReward").onclick = screenReward;
     $("#toShop").onclick = screenShop;
     wireBack();
     session = null;
@@ -692,6 +760,155 @@
     $("#backShop").onclick = screenShop;
   }
 
+  // ---------- หน้าของรางวัล (ดาว → ของจริง) ----------
+  function ledgerRowsHTML(p, limit) {
+    var items = p.ledger.slice().reverse();
+    if (limit) items = items.slice(0, limit);
+    if (items.length === 0) return '<p class="muted center">ยังไม่มีประวัติ</p>';
+    return items.map(function (e) {
+      var icon = e.type === "redeem" ? "🎁" : (e.type === "grant" ? "💖" : "⭐");
+      var amt = (e.amount > 0 ? "+" : "") + e.amount;
+      return '<div class="ledger-row"><span>' + icon + ' ' + esc(e.note) + '</span>' +
+        '<span class="' + (e.amount < 0 ? "neg" : "pos") + '">' + amt + ' ⭐</span></div>';
+    }).join("");
+  }
+
+  function screenReward() {
+    var p = profile(current);
+    var cost = family.reward.cost, have = p.starBank;
+    var canRedeem = have >= cost;
+    var pct = Math.min(100, Math.round((have / cost) * 100));
+    root.innerHTML = hudHTML(p, "subjects") +
+      '<h1>🎁 ของรางวัล</h1>' +
+      '<div class="reward-hero">' +
+      '<div class="rh-balance">⭐ <b>' + have + '</b></div>' +
+      '<div class="muted">ดาวสะสมของ ' + esc(current) + '</div>' +
+      '</div>' +
+      '<div class="reward-card' + (canRedeem ? " ready" : "") + '">' +
+      '<div class="rc-emoji">' + family.reward.emoji + '</div>' +
+      '<div class="rc-name">' + esc(family.reward.name) + '</div>' +
+      '<div class="rc-cost">ใช้ ' + cost + ' ⭐</div>' +
+      '<div class="progress-bar"><i style="width:' + pct + '%"></i></div>' +
+      '<div class="rc-status">' + (canRedeem ? "🎉 ครบแล้ว แลกได้เลย!" : "อีก " + (cost - have) + " ⭐") + '</div>' +
+      '<button class="btn big ' + (canRedeem ? "green" : "") + '" id="redeemBtn"' + (canRedeem ? "" : " disabled") + '>ขอแลกรางวัล 🔒</button>' +
+      '</div>' +
+      '<h2 style="font-size:1.2rem">ประวัติล่าสุด</h2>' +
+      '<div class="ledger">' + ledgerRowsHTML(p, 5) + '</div>' +
+      '<button class="btn big blue" id="parentBtn">โหมดพ่อแม่ 🔒</button>';
+    wireBack();
+    $("#redeemBtn").onclick = function () {
+      if (p.starBank < cost) return;
+      askPin("ใส่ PIN เพื่อแลกรางวัล", function (ok) {
+        if (!ok) return;
+        addStars(p, -cost, "redeem", "แลก " + family.reward.name);
+        persist();
+        confetti(140); soundReward();
+        toast("🎉 แลกสำเร็จ! บอกคุณพ่อคุณแม่รับ " + family.reward.name);
+        screenReward();
+      });
+    };
+    $("#parentBtn").onclick = function () {
+      askPin("ใส่ PIN โหมดพ่อแม่", function (ok) { if (ok) screenParent(); });
+    };
+  }
+
+  // ---------- โหมดพ่อแม่ ----------
+  function screenParent() {
+    var p = profile(current);
+    root.innerHTML = hudHTML(p, "reward") +
+      '<h1>👨‍👩‍👧 โหมดพ่อแม่</h1>' +
+      '<p class="center muted">จัดการดาวและของรางวัลของ ' + esc(current) + '</p>' +
+
+      '<div class="q-card">' +
+      '<h2 style="font-size:1.15rem">⭐ เพิ่ม/ลดดาว (ความดีนอกเกม)</h2>' +
+      '<p class="center">ดาวตอนนี้: <b id="pBank">' + p.starBank + '</b> ⭐</p>' +
+      '<input class="txt" id="grantNote" placeholder="เหตุผล เช่น ช่วยงานบ้าน" />' +
+      '<div class="btn-row">' +
+      '<button class="btn green" data-grant="1">+1</button>' +
+      '<button class="btn green" data-grant="5">+5</button>' +
+      '<button class="btn orange" data-grant="-1">−1</button>' +
+      '</div></div>' +
+
+      '<div class="q-card">' +
+      '<h2 style="font-size:1.15rem">🎁 ตั้งค่าของรางวัล</h2>' +
+      '<label class="fld">ชื่อรางวัล<input class="txt" id="rName" value="' + esc(family.reward.name) + '" /></label>' +
+      '<label class="fld">Emoji<input class="txt" id="rEmoji" value="' + esc(family.reward.emoji) + '" maxlength="4" /></label>' +
+      '<label class="fld">ใช้กี่ดาว<input class="txt" id="rCost" type="number" min="1" value="' + family.reward.cost + '" /></label>' +
+      '<button class="btn green" id="saveReward">บันทึกรางวัล</button>' +
+      '</div>' +
+
+      '<div class="q-card">' +
+      '<h2 style="font-size:1.15rem">📜 ประวัติทั้งหมด</h2>' +
+      '<div class="ledger">' + ledgerRowsHTML(p, 0) + '</div></div>' +
+
+      '<button class="btn big blue" id="changePin">เปลี่ยน PIN</button>' +
+      '<button class="btn big" data-back="reward">⟵ กลับหน้าของรางวัล</button>';
+    wireBack();
+
+    $all("[data-grant]").forEach(function (el) {
+      el.onclick = function () {
+        var amt = parseInt(el.getAttribute("data-grant"), 10);
+        var note = ($("#grantNote").value || "").trim() || (amt > 0 ? "ความดีพิเศษ" : "ปรับดาว");
+        addStars(p, amt, "grant", note);
+        persist();
+        $("#pBank").textContent = p.starBank;
+        toast((amt > 0 ? "เพิ่ม " : "ลด ") + Math.abs(amt) + " ⭐ ให้ " + current);
+      };
+    });
+    $("#saveReward").onclick = function () {
+      var name = ($("#rName").value || "").trim();
+      var emoji = ($("#rEmoji").value || "").trim() || "🎁";
+      var cost = Math.max(1, parseInt($("#rCost").value, 10) || 1);
+      if (name) family.reward.name = name;
+      family.reward.emoji = emoji;
+      family.reward.cost = cost;
+      saveFamily();
+      toast("บันทึกของรางวัลแล้ว ✓");
+    };
+    $("#changePin").onclick = function () {
+      family.pin = null; saveFamily();
+      askPin("ตั้ง PIN ใหม่", function () { toast("ตั้ง PIN ใหม่แล้ว ✓"); });
+    };
+  }
+
+  // ---------- แป้น PIN ----------
+  function askPin(title, cb) {
+    var setMode = !family.pin;
+    var entered = "";
+    var ov = document.createElement("div");
+    ov.className = "pin-overlay";
+    function render() {
+      var dots = "";
+      for (var i = 0; i < 4; i++) dots += '<span class="pin-dot' + (i < entered.length ? " on" : "") + '"></span>';
+      var keys = "";
+      ["1","2","3","4","5","6","7","8","9","","0","⌫"].forEach(function (k) {
+        keys += k === "" ? '<span></span>' : '<button class="pin-key" data-k="' + k + '">' + k + '</button>';
+      });
+      ov.innerHTML = '<div class="pin-box">' +
+        '<div class="pin-title">' + esc(setMode ? "ตั้ง PIN 4 หลัก (ครั้งแรก)" : title) + '</div>' +
+        '<div class="pin-dots">' + dots + '</div>' +
+        '<div class="pin-pad">' + keys + '</div>' +
+        '<button class="btn pin-cancel">ยกเลิก</button></div>';
+      $all(".pin-key", ov).forEach(function (b) {
+        b.onclick = function () {
+          var k = b.getAttribute("data-k");
+          if (k === "⌫") entered = entered.slice(0, -1);
+          else if (entered.length < 4) entered += k;
+          render();
+          if (entered.length === 4) submit();
+        };
+      });
+      $(".pin-cancel", ov).onclick = function () { ov.remove(); cb(false); };
+    }
+    function submit() {
+      if (setMode) { family.pin = entered; saveFamily(); ov.remove(); cb(true); }
+      else if (entered === family.pin) { ov.remove(); cb(true); }
+      else { entered = ""; var box = $(".pin-box", ov); box.classList.add("shake"); setTimeout(function () { box.classList.remove("shake"); }, 400); render(); }
+    }
+    render();
+    document.body.appendChild(ov);
+  }
+
   // ---------- ปุ่มย้อนกลับ ----------
   function wireBack() {
     $all("[data-back]").forEach(function (el) {
@@ -699,6 +916,7 @@
         var to = el.getAttribute("data-back");
         if (to === "profile") { current = null; curQuiz = null; screenProfile(); }
         else if (to === "subjects") { curQuiz = null; screenSubjects(); }
+        else if (to === "reward") screenReward();
         else if (to === "map") screenMap();
       };
     });
