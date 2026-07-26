@@ -394,14 +394,28 @@
   }
 
   // ---------- อ่านออกเสียง (Web Speech API — ฟรี, ในตัวเบราว์เซอร์) ----------
+  var _utter = null; // เก็บ reference กัน utterance โดน GC (บางเบราว์เซอร์พูดไม่จบ)
+  function primeVoices() { try { if (window.speechSynthesis) { window.speechSynthesis.getVoices(); window.speechSynthesis.onvoiceschanged = function () {}; } } catch (e) {} }
   function stopSpeak() { try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {} }
   function speak(text, lang) {
     try {
-      if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
-      window.speechSynthesis.cancel();
-      var u = new window.SpeechSynthesisUtterance(text);
-      u.lang = lang; u.rate = 0.85;
-      window.speechSynthesis.speak(u);
+      var synth = window.speechSynthesis;
+      if (!synth || !window.SpeechSynthesisUtterance) { toast("เครื่องนี้ไม่รองรับการอ่านออกเสียง 😢"); return; }
+      function go() {
+        var u = new window.SpeechSynthesisUtterance(text);
+        u.lang = lang; u.rate = 0.85;
+        var voices = synth.getVoices() || [];
+        var pre = lang.slice(0, 2).toLowerCase();
+        var v = voices.filter(function (x) { return x.lang && x.lang.toLowerCase().indexOf(pre) === 0; })[0];
+        if (v) u.voice = v;
+        else if (pre === "th" && voices.length > 0) toast("เครื่องนี้ยังไม่มีเสียงอ่านภาษาไทย 🔇");
+        _utter = u;
+        try { synth.resume(); } catch (e) {}  // แก้บั๊ก Chrome ที่ค้าง paused
+        synth.speak(u);
+      }
+      // อย่า cancel() ทันทีก่อน speak() ในจังหวะเดียว (ทำให้ Chrome เงียบ)
+      if (synth.speaking || synth.pending) { synth.cancel(); setTimeout(go, 130); }
+      else go();
     } catch (e) {}
   }
   function speakQuestion(quiz, q) {
@@ -1015,5 +1029,6 @@
   };
 
   // ---------- start ----------
+  primeVoices();
   screenProfile();
 })();
