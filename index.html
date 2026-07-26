@@ -6,6 +6,11 @@
   <meta name="theme-color" content="#9B5DE5">
   <title>เกมทบทวนบทเรียน — Kaka & Sheva</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ทบทวนบทเรียน">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -16,5 +21,14 @@
   <script src="buddies.js"></script>
   <script src="data/quizzes.js"></script>
   <script src="app.js"></script>
+
+  <!-- Service Worker: เล่นออฟไลน์ + เพิ่มลงหน้าจอโฮมได้ (ทำงานเฉพาะบนเว็บ https ไม่ใช่ file://) -->
+  <script>
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('sw.js').catch(function () {});
+      });
+    }
+  </script>
 </body>
 </html>

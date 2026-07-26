@@ -86,6 +86,25 @@
     p.ledger.push({ type: type, amount: amount, note: note, date: todayStr() });
   }
 
+  // ---------- ย้ายเครื่อง: ส่งออก/นำเข้าโค้ดเซฟ (base64 รองรับ UTF-8) ----------
+  function b64encode(str) { return btoa(unescape(encodeURIComponent(str))); }
+  function b64decode(code) { return decodeURIComponent(escape(atob(code))); }
+  function exportCode() {
+    return b64encode(JSON.stringify({ v: 1, save: save, family: family }));
+  }
+  function importCode(code) {
+    var obj = JSON.parse(b64decode((code || "").trim()));
+    if (!obj || typeof obj !== "object" || !obj.save) throw new Error("bad code");
+    save = obj.save;
+    if (obj.family && obj.family.reward) family = obj.family;
+    persist(); saveFamily();
+  }
+  function copyText(t, el) {
+    try { if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(t); return true; } } catch (e) {}
+    try { el.focus(); el.select(); document.execCommand("copy"); return true; } catch (e) {}
+    return false;
+  }
+
   // รีเซ็ตความคืบหน้าของเด็กคนนี้ (เก็บ buddy ไว้) — ใช้ตอนพ่อทดสอบเสร็จ
   function resetProgress(p) {
     p.coins = 0; p.xp = 0; p.stickers = [];
@@ -919,6 +938,16 @@
       '<div class="ledger">' + ledgerRowsHTML(p, 0) + '</div></div>' +
 
       '<div class="q-card">' +
+      '<h2 style="font-size:1.15rem">📤 ย้ายเครื่อง (เซฟ/โหลด)</h2>' +
+      '<p class="muted">ย้ายความคืบหน้า (ของทั้ง 2 คน + PIN/รางวัล) ไปอีกเครื่อง<br>1) เครื่องเก่า: กดสร้างโค้ด → คัดลอก · 2) เครื่องใหม่: วางโค้ด → โหลด</p>' +
+      '<button class="btn green" id="expBtn">📋 สร้าง + คัดลอกโค้ดเซฟ</button>' +
+      '<textarea class="txt" id="expOut" readonly rows="3" placeholder="โค้ดเซฟจะขึ้นตรงนี้ (คัดลอกไปวางอีกเครื่อง)"></textarea>' +
+      '<div style="height:8px"></div>' +
+      '<textarea class="txt" id="impIn" rows="3" placeholder="วางโค้ดเซฟจากอีกเครื่องตรงนี้ แล้วกดโหลด"></textarea>' +
+      '<button class="btn orange" id="impBtn">📥 โหลดข้อมูลจากโค้ด</button>' +
+      '</div>' +
+
+      '<div class="q-card">' +
       '<h2 style="font-size:1.15rem">♻️ รีเซ็ตความคืบหน้า</h2>' +
       '<p class="muted">ล้างด่าน/ดาว/เหรียญ/สติกเกอร์ของ ' + esc(current) + ' ให้เริ่มนับใหม่ (เก็บเพื่อนคู่ใจไว้) — ใช้ตอนทดสอบเสร็จแล้ว</p>' +
       '<button class="btn orange" id="resetProg">รีเซ็ตความคืบหน้าของ ' + esc(current) + '</button>' +
@@ -947,6 +976,32 @@
       family.reward.cost = cost;
       saveFamily();
       toast("บันทึกของรางวัลแล้ว ✓");
+    };
+    $("#expBtn").onclick = function () {
+      var out = $("#expOut");
+      out.value = exportCode();
+      var okc = copyText(out.value, out);
+      toast(okc ? "คัดลอกโค้ดเซฟแล้ว ✓ เอาไปวางอีกเครื่อง" : "สร้างโค้ดแล้ว — กดค้างเลือกคัดลอกเองได้");
+    };
+    $("#impBtn").onclick = function () {
+      var b = $("#impBtn");
+      var code = ($("#impIn").value || "").trim();
+      if (!code) { toast("วางโค้ดเซฟก่อนนะครับ"); return; }
+      if (!b.getAttribute("data-armed")) {
+        b.setAttribute("data-armed", "1"); b.classList.remove("orange"); b.classList.add("pink");
+        b.textContent = "⚠️ จะเขียนทับข้อมูลเครื่องนี้ กดอีกครั้ง";
+        return;
+      }
+      try {
+        importCode(code);
+        toast("โหลดข้อมูลสำเร็จ ✓");
+        current = null; curQuiz = null;
+        screenProfile();
+      } catch (e) {
+        b.removeAttribute("data-armed"); b.classList.remove("pink"); b.classList.add("orange");
+        b.textContent = "📥 โหลดข้อมูลจากโค้ด";
+        toast("โค้ดไม่ถูกต้อง ลองคัดลอกใหม่ให้ครบ");
+      }
     };
     $("#resetProg").onclick = function () {
       var b = $("#resetProg");
