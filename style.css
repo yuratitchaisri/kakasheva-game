@@ -163,7 +163,13 @@ h1 { font-size: 1.9rem; }
 .q-count { text-align: center; font-weight: 800; color: #5a5a72; margin-bottom: 8px; }
 
 .q-card { background: var(--card); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); margin-bottom: 12px; }
-.q-tag { display: inline-block; background: var(--yellow); color: #8a5a00; font-weight: 800; font-size: .8rem; padding: 3px 12px; border-radius: 999px; margin-bottom: 8px; }
+.q-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.q-tag { display: inline-block; background: var(--yellow); color: #8a5a00; font-weight: 800; font-size: .8rem; padding: 3px 12px; border-radius: 999px; }
+.speak-btn {
+  border: none; background: var(--blue); color: #fff; font-family: inherit; font-weight: 800;
+  font-size: .95rem; padding: 8px 14px; border-radius: 999px; cursor: pointer; box-shadow: 0 3px 0 rgba(0,0,0,.12);
+}
+.speak-btn:active { transform: translateY(2px); }
 .q-prompt { font-size: 1.3rem; font-weight: 800; line-height: 1.5; }
 
 /* ปุ่มตัวเลือก MC */
@@ -310,6 +316,14 @@ h1 { font-size: 1.9rem; }
   border: 3px solid #E7E3F0; border-radius: 12px; margin: 6px 0; box-sizing: border-box;
 }
 .fld { display: block; font-weight: 700; font-size: .9rem; color: #5a5a72; margin-top: 8px; }
+
+/* ---------- สรุปจุดที่ควรติว (โหมดพ่อแม่) ---------- */
+.stat-list { margin-top: 6px; }
+.stat-row { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px dashed #e0dcec; font-weight: 700; flex-wrap: wrap; }
+.stat-row:last-child { border-bottom: none; }
+.stat-meta { font-size: .82rem; font-weight: 600; color: #6b6b80; }
+.stat-wrong { color: var(--pink); font-weight: 800; }
+.stat-ok { color: var(--green); font-weight: 800; }
 
 /* ---------- PIN overlay ---------- */
 .pin-overlay {

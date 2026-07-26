@@ -365,6 +365,7 @@
   var TAGS = { mc: "เลือกคำตอบ", fill: "เติมคำ", sort: "จำแนกลงกล่อง", order: "เรียงลำดับ" };
 
   function renderQuestion() {
+    stopSpeak();
     var p = profile(current);
     var q = session.questions[session.i];
     var total = session.questions.length;
@@ -374,7 +375,8 @@
       '<div class="progress-bar"><i style="width:' + pct + '%"></i></div>' +
       '<div class="q-count">ข้อ ' + (session.i + 1) + ' / ' + total + (session.review ? " · ทบทวน 💪" : "") + '</div>';
 
-    var body = '<div class="q-card"><span class="q-tag">' + TAGS[q.type] + '</span>';
+    var body = '<div class="q-card"><div class="q-head"><span class="q-tag">' + TAGS[q.type] + '</span>' +
+      '<button class="speak-btn" id="speakBtn">🔊 อ่านให้ฟัง</button></div>';
     if (q.type === "mc") body += renderMC(q);
     else if (q.type === "fill") body += renderFill(q);
     else if (q.type === "sort") body += renderSort(q);
@@ -383,10 +385,39 @@
 
     root.innerHTML = head + body;
     wireBack();
+    var sb = $("#speakBtn");
+    if (sb) sb.onclick = function () { speakQuestion(session.quiz, q); };
     if (q.type === "mc") wireMC(q);
     else if (q.type === "fill") wireFill(q);
     else if (q.type === "sort") wireSort(q);
     else if (q.type === "order") wireOrder(q);
+  }
+
+  // ---------- อ่านออกเสียง (Web Speech API — ฟรี, ในตัวเบราว์เซอร์) ----------
+  function stopSpeak() { try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {} }
+  function speak(text, lang) {
+    try {
+      if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
+      window.speechSynthesis.cancel();
+      var u = new window.SpeechSynthesisUtterance(text);
+      u.lang = lang; u.rate = 0.85;
+      window.speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+  function speakQuestion(quiz, q) {
+    var en = ["english", "math-inter", "science-inter"].indexOf(quiz.subjectKey) >= 0;
+    var lang = en ? "en-US" : "th-TH";
+    var gap = en ? " blank " : " ช่องว่าง ";
+    var text = String(q.prompt).split("___").join(gap);
+    if (q.type === "mc") {
+      var keys = en ? ["A", "B", "C", "D", "E"] : ["ก", "ข", "ค", "ง", "จ"];
+      text += ". " + q.choices.map(function (c, i) { return keys[i] + " " + c; }).join(", ");
+    } else if (q.type === "fill") {
+      text += ". " + (en ? "choose: " : "คำที่ให้เลือก ") + q.options.join(", ");
+    } else if (q.type === "sort") {
+      text += ". " + q.items.join(", ");
+    }
+    speak(text, lang);
   }
 
   // ----- MC -----
@@ -821,12 +852,35 @@
     };
   }
 
+  // สรุปจุดที่ควรติว (ใช้ข้อมูล wrong + ความคืบหน้าด่าน)
+  function parentStatsHTML(p) {
+    var stats = quizzesFor(current).map(function (quiz) {
+      var levels = levelsOf(quiz), done = 0, stars = 0;
+      levels.forEach(function (_, i) { var r = levelRecord(p, quiz.id, i); if (r.done) done++; stars += r.stars; });
+      return { subject: quiz.subject, emoji: quiz.emoji, wrong: (p.wrong[quiz.id] || []).length, done: done, levels: levels.length, stars: stars };
+    }).filter(function (s) { return s.wrong > 0 || s.done > 0; });
+    if (stats.length === 0) return '<p class="muted center">ยังไม่มีข้อมูล — ให้ลูกเล่นก่อนสักหน่อยนะครับ</p>';
+    stats.sort(function (a, b) { return b.wrong - a.wrong; });
+    return stats.map(function (s) {
+      var badge = s.wrong > 0
+        ? '<span class="stat-wrong">ยังพลาด ' + s.wrong + ' ข้อ</span>'
+        : '<span class="stat-ok">✅ ไม่มีข้อค้าง</span>';
+      return '<div class="stat-row"><span>' + s.emoji + ' ' + esc(s.subject) + '</span>' +
+        '<span class="stat-meta">' + badge + ' · ผ่าน ' + s.done + '/' + s.levels + ' ด่าน · ⭐' + s.stars + '</span></div>';
+    }).join("");
+  }
+
   // ---------- โหมดพ่อแม่ ----------
   function screenParent() {
     var p = profile(current);
     root.innerHTML = hudHTML(p, "reward") +
       '<h1>👨‍👩‍👧 โหมดพ่อแม่</h1>' +
       '<p class="center muted">จัดการดาวและของรางวัลของ ' + esc(current) + '</p>' +
+
+      '<div class="q-card">' +
+      '<h2 style="font-size:1.15rem">📊 สรุปจุดที่ควรติว</h2>' +
+      '<p class="muted" style="font-size:.85rem">เรียงวิชาที่ยังพลาดบ่อยไว้บนสุด — เอาไว้ดูว่าควรทวนเรื่องไหนเพิ่ม</p>' +
+      '<div class="stat-list">' + parentStatsHTML(p) + '</div></div>' +
 
       '<div class="q-card">' +
       '<h2 style="font-size:1.15rem">⭐ เพิ่ม/ลดดาว (ความดีนอกเกม)</h2>' +
