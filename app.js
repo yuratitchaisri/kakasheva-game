@@ -86,6 +86,8 @@
     if (!p.ledger) p.ledger = [];
     if (!p.stats) p.stats = {};   // สถิติรายวิชา (dashboard พ่อแม่)
     if (!p.daily) p.daily = {};   // สถิติรายวัน (กราฟ 14 วัน)
+    if (!p.qstat) p.qstat = {};   // สถิติรายข้อ [ตอบกี่ครั้ง, ผิดกี่ครั้ง] — ไว้หาข้อที่ผิดซ้ำ
+    if (!p.hours) p.hours = {};   // นับตามชั่วโมงที่ตอบ — ไว้ดูว่าเล่นตอนไหน
     return p;
   }
 
@@ -106,6 +108,12 @@
     var keep = {}, i;
     for (i = 0; i < DAILY_KEEP; i++) keep[dayStr(-i)] = 1;
     Object.keys(p.daily).forEach(function (k) { if (!keep[k]) delete p.daily[k]; });
+  }
+  // [ตอบไปกี่ครั้ง, ผิดกี่ครั้ง] ต่อข้อ — เก็บเป็น array สั้นๆ ให้เซฟไม่บวม
+  function qStat(p, quizId, qid) {
+    if (!p.qstat[quizId]) p.qstat[quizId] = {};
+    if (!p.qstat[quizId][qid]) p.qstat[quizId][qid] = [0, 0];
+    return p.qstat[quizId][qid];
   }
   function ensureLevel(p, quizId, key) {
     if (!p.levels[quizId]) p.levels[quizId] = {};
@@ -130,7 +138,8 @@
     var lean = {};
     Object.keys(save).forEach(function (name) {
       var c = save[name], copy = {};
-      Object.keys(c).forEach(function (k) { if (k !== "daily") copy[k] = c[k]; });
+      var SKIP = ["daily", "qstat", "hours"];   // สถิติประกอบของเครื่องนั้น ไม่ใช่ความคืบหน้า
+      Object.keys(c).forEach(function (k) { if (SKIP.indexOf(k) < 0) copy[k] = c[k]; });
       lean[name] = copy;
     });
     return b64encode(JSON.stringify({ v: 1, save: lean, family: family }));
@@ -154,7 +163,7 @@
     p.streak = { count: 0, lastDay: null };
     p.levels = {}; p.wrong = {};
     p.starBank = 0; p.ledger = [];
-    p.stats = {}; p.daily = {};
+    p.stats = {}; p.daily = {}; p.qstat = {}; p.hours = {};
     persist();
   }
 
@@ -874,6 +883,13 @@
       lrec.a = (lrec.a || 0) + 1;
       if (ok) lrec.c = (lrec.c || 0) + 1;
     }
+    var hr = String(new Date().getHours());      // เล่นตอนกี่โมง
+    p.hours[hr] = (p.hours[hr] || 0) + 1;
+    if (session.kind !== "match") {              // ผิดซ้ำรายข้อ (บอร์ดจับคู่ id ไม่คงที่ ข้ามไป)
+      var qst = qStat(p, session.quiz.id, q.id);
+      qst[0]++;
+      if (!ok) qst[1]++;
+    }
 
     // เก็บถูก/ผิดรายข้อ แล้ว persist ทันที — กดออกกลางด่านหนีข้อผิดไม่ได้
     (ok ? session.rightIds : session.wrongIds).push(q.id);
@@ -1132,19 +1148,52 @@
     if (m < 60) return m + " นาที";
     return Math.floor(m / 60) + " ชม. " + (m % 60) + " น.";
   }
-  // แยกตัวเลขกับหน่วยสำหรับช่อง KPI (เลขใหญ่บรรทัดเดียว หน่วยอยู่ใต้)
-  function durParts(sec) {
-    if (!sec) return { v: "0", u: "นาที" };
-    if (sec < 60) return { v: String(sec), u: "วินาที" };
-    var m = Math.round(sec / 60);
-    if (m < 60) return { v: String(m), u: "นาที" };
-    return { v: (Math.round(m / 6) / 10).toFixed(1), u: "ชั่วโมง" };
-  }
   // ความแม่นยำ → สถานะ (สีมาคู่กับไอคอน+ข้อความเสมอ ไม่ให้สีสื่อความหมายลำพัง)
   function accBand(pct) {
     if (pct >= 85) return { cls: "good", icon: "✅", label: "แม่นแล้ว" };
     if (pct >= 70) return { cls: "mid", icon: "⚠️", label: "พอใช้" };
     return { cls: "bad", icon: "❗", label: "ควรติว" };
+  }
+
+  // ข้อความเฉลยของแต่ละชนิดคำถาม (ใช้โชว์ให้พ่อแม่ดูว่าข้อที่ลูกผิด คำตอบคืออะไร)
+  function answerText(q) {
+    if (q.type === "mc") return q.choices[q.answer];
+    if (q.type === "fill") return q.blanks.map(function (b) { return b[0]; }).join(" , ");
+    if (q.type === "sort") return Object.keys(q.bins).map(function (bn) { return bn + ": " + q.bins[bn].join(", "); }).join(" · ");
+    if (q.type === "order") return q.seq.join(" ");
+    return "";
+  }
+  // รวมสถิติของช่วง N วันย้อนหลัง (from..to วัน)
+  function windowStat(p, from, to) {
+    var a = 0, c = 0;
+    for (var i = from; i < to; i++) {
+      var d = p.daily[dayStr(-i)];
+      if (d) { a += d.a; c += d.c; }
+    }
+    return { a: a, c: c, pct: a ? Math.round(c / a * 100) : null };
+  }
+  // เวลาเฉลี่ยต่อข้อ — ต่ำผิดปกติ = น่าจะกดมั่วโดยไม่อ่านโจทย์
+  var FAST_SEC = 5;
+  function paceNote(sec, a) {
+    if (!a) return null;
+    var avg = sec / a;
+    if (avg < FAST_SEC) return { fast: true, avg: avg };
+    return { fast: false, avg: avg };
+  }
+
+  // ข้อที่ยังตอบผิดค้างอยู่ พร้อมเฉลย + จำนวนครั้งที่ผิดซ้ำ
+  function wrongQuestions(p) {
+    var rows = [];
+    quizzesFor(current).forEach(function (quiz) {
+      (p.wrong[quiz.id] || []).forEach(function (id) {
+        var q = quiz.questions.filter(function (x) { return x.id === id; })[0];
+        if (!q) return;                       // ข้อนี้ถูกลบออกจากเกมไปแล้ว
+        var st = (p.qstat[quiz.id] || {})[id] || [0, 0];
+        rows.push({ subject: quiz.subject, emoji: quiz.emoji, q: q, tries: st[0], wrongs: st[1] });
+      });
+    });
+    rows.sort(function (a, b) { return (b.wrongs - a.wrongs) || (b.tries - a.tries); });
+    return rows;
   }
 
   function dashRows(p) {
@@ -1197,14 +1246,25 @@
 
     var totPct = Math.round(totC / totA * 100);
     var totBand = accBand(totPct);
+    var pace = paceNote(totSec, totA);
+
+    // ---- แนวโน้ม: 7 วันล่าสุด เทียบ 7 วันก่อนหน้า ----
+    var w1 = windowStat(p, 0, 7), w0 = windowStat(p, 7, 14);
+    var delta = (w1.pct !== null && w0.pct !== null) ? w1.pct - w0.pct : null;
+    var deltaHTML = delta === null ? '<div class="k-sub">ยังเทียบไม่ได้</div>'
+      : '<div class="k-delta ' + (delta > 0 ? 'up' : (delta < 0 ? 'down' : '')) + '">' +
+        (delta > 0 ? '▲ +' : (delta < 0 ? '▼ ' : '– ')) + (delta === 0 ? '0' : delta) + '% vs 7 วันก่อน</div>';
 
     // ---- KPI ----
     var kpi = '<div class="kpi-row">' +
-      '<div class="kpi"><div class="k-label">ตอบไปแล้ว</div><div class="k-value">' + totA.toLocaleString("th-TH") + '</div><div class="k-sub">ข้อ</div></div>' +
-      '<div class="kpi"><div class="k-label">ตอบถูก</div><div class="k-value">' + totPct + '%</div><div class="k-sub">' + totC.toLocaleString("th-TH") + ' ข้อ</div></div>' +
-      '<div class="kpi"><div class="k-label">เวลาเล่นรวม</div><div class="k-value">' + durParts(totSec).v + '</div><div class="k-sub">' + durParts(totSec).u + '</div></div>' +
+      '<div class="kpi"><div class="k-label">ตอบไปแล้ว</div><div class="k-value">' + totA.toLocaleString("th-TH") + '</div><div class="k-sub">ข้อ · ' + fmtDur(totSec) + '</div></div>' +
+      '<div class="kpi"><div class="k-label">ตอบถูก</div><div class="k-value">' + totPct + '%</div>' + deltaHTML + '</div>' +
+      '<div class="kpi"><div class="k-label">เฉลี่ยต่อข้อ</div><div class="k-value">' + (pace ? pace.avg.toFixed(0) : '—') + '</div><div class="k-sub">วินาที' + (pace && pace.fast ? ' ⚡' : '') + '</div></div>' +
       '<div class="kpi"><div class="k-label">เข้าเล่น</div><div class="k-value">' + days + '</div><div class="k-sub">วัน</div></div>' +
-      '</div>';
+      '</div>' +
+      (pace && pace.fast
+        ? '<div class="dash-note warn">⚡ <b>เฉลี่ยแค่ ' + pace.avg.toFixed(0) + ' วินาทีต่อข้อ</b> — เร็วจนน่าจะกดโดยไม่ได้อ่านโจทย์ ลองนั่งดูด้วยสักรอบนะครับ</div>'
+        : '');
 
     // ---- แท่งเทียบวิชา (สีเดียว = วัดค่าเดียวกัน) ----
     var played = rows.filter(function (r) { return r.a > 0; }).sort(function (a, b) { return b.a - a.a; });
@@ -1214,12 +1274,15 @@
       var w = Math.max(3, Math.round(r.a / max * 100));
       var band = accBand(r.pct);
       var inside = w > 72;   // วัดก่อนวางป้าย: แท่งยาวมากให้ป้ายเข้าไปอยู่ในแท่ง จะได้ไม่ล้นขอบ
+      var pc = paceNote(r.sec, r.a);
       return '<div class="dash-row">' +
         '<div class="d-name">' + r.emoji + ' ' + esc(r.subject) + '</div>' +
         '<div class="d-track"><div class="d-fill" style="width:' + w + '%"></div>' +
         '<span class="d-val' + (inside ? ' in' : '') + '" style="' + (inside ? 'right:8px' : 'left:calc(' + w + '% + 8px)') + '">' + r.a + '</span></div>' +
         '<div class="d-meta"><span class="acc-chip ' + band.cls + '">' + band.icon + ' ' + r.pct + '% ' + band.label + '</span>' +
-        '<span class="d-dim">' + r.plays + ' ครั้ง · ' + fmtDur(r.sec) + ' · เต็มดาว ' + r.perfect + '/' + r.stages + '</span></div>' +
+        '<span class="d-dim">' + r.plays + ' ครั้ง · ' + fmtDur(r.sec) +
+        (pc ? ' · เฉลี่ย ' + pc.avg.toFixed(0) + ' วิ/ข้อ' + (pc.fast ? ' ⚡' : '') : '') +
+        ' · เต็มดาว ' + r.perfect + '/' + r.stages + '</span></div>' +
         '</div>';
     }).join("");
 
@@ -1264,10 +1327,58 @@
         '<span class="acc-chip ' + band.cls + '">' + band.icon + ' ' + w.pct + '% ' + band.label + '</span></div>';
     }).join("");
 
+    // ---- ข้อที่ยังตอบผิด พร้อมเฉลย ----
+    var wrongs = wrongQuestions(p);
+    var WRONG_SHOW = 5;
+    function wrongCard(w) {
+      var again = w.wrongs > 1 ? '<span class="rep-chip">❗ ผิดซ้ำ ' + w.wrongs + ' ครั้ง</span>' : '';
+      return '<div class="wq">' +
+        '<div class="wq-top"><span class="d-dim">' + w.emoji + ' ' + esc(w.subject) + '</span>' + again + '</div>' +
+        '<div class="wq-q">' + esc(w.q.prompt) + '</div>' +
+        '<div class="wq-a">✅ ' + esc(answerText(w.q)) + '</div>' +
+        '<div class="wq-e">💡 ' + esc(w.q.explain) + '</div></div>';
+    }
+    var wrongHTML = !wrongs.length
+      ? '<p class="muted center">🎉 ตอนนี้ไม่มีข้อค้างเลย</p>'
+      : '<div id="wqList">' + wrongs.slice(0, WRONG_SHOW).map(wrongCard).join("") + '</div>' +
+        '<div id="wqMore" hidden>' + wrongs.slice(WRONG_SHOW).map(wrongCard).join("") + '</div>' +
+        (wrongs.length > WRONG_SHOW
+          ? '<button class="btn" id="wqBtn" style="font-size:.9rem;padding:8px 14px">ดูอีก ' + (wrongs.length - WRONG_SHOW) + ' ข้อ ▾</button>'
+          : '');
+
+    // ---- เล่นตอนกี่โมง (จัดกลุ่มให้อ่านง่ายกว่าราย 24 ชม.) ----
+    var BUCKETS = [
+      { name: "เช้า", sub: "06–11", hrs: [6, 7, 8, 9, 10, 11] },
+      { name: "กลางวัน", sub: "12–16", hrs: [12, 13, 14, 15, 16] },
+      { name: "เย็น", sub: "17–19", hrs: [17, 18, 19] },
+      { name: "ค่ำ", sub: "20–21", hrs: [20, 21] },
+      { name: "ดึก", sub: "22–05", hrs: [22, 23, 0, 1, 2, 3, 4, 5] }
+    ];
+    var bTot = BUCKETS.map(function (b) {
+      return b.hrs.reduce(function (s, h) { return s + (p.hours[String(h)] || 0); }, 0);
+    });
+    var bMax = Math.max.apply(null, bTot.concat([1]));
+    var bSum = bTot.reduce(function (s, v) { return s + v; }, 0);
+    var hourHTML = !bSum ? '<p class="muted center">ยังไม่มีข้อมูล</p>' :
+      '<div class="dash-list">' + BUCKETS.map(function (b, i) {
+        var w = bTot[i] ? Math.max(3, Math.round(bTot[i] / bMax * 100)) : 0;
+        var pct = Math.round(bTot[i] / bSum * 100);
+        return '<div class="hour-row"><div class="d-name">' + b.name + ' <span class="d-dim">' + b.sub + ' น.</span></div>' +
+          '<div class="d-track"><div class="d-fill" style="width:' + w + '%"></div>' +
+          '<span class="d-val" style="left:calc(' + w + '% + 8px)">' + bTot[i] + '</span></div>' +
+          '<div class="d-meta"><span class="d-dim">' + pct + '% ของที่ตอบทั้งหมด</span></div></div>';
+      }).join("") + '</div>' +
+      (bTot[4] / bSum > 0.25 ? '<div class="dash-note warn">🌙 เล่นช่วงดึก (22–05 น.) ถึง ' + Math.round(bTot[4] / bSum * 100) + '% ของทั้งหมด — ง่วงแล้วตอบผิดง่ายขึ้นนะครับ</div>' : '');
+
     root.innerHTML = hudHTML(p, "parent") +
       '<h1>📊 สถิติการเล่น</h1>' +
       '<p class="center muted">' + esc(current) + ' · ' + totBand.icon + ' ภาพรวมตอบถูก ' + totPct + '% (' + totBand.label + ')</p>' +
       kpi +
+
+      '<div class="q-card">' +
+      '<h2 style="font-size:1.15rem">📝 ข้อที่ยังตอบผิดอยู่ (' + wrongs.length + ' ข้อ)</h2>' +
+      '<p class="muted" style="font-size:.85rem">เปิดอ่านแล้วนั่งติวกับลูกได้เลย — เรียงข้อที่ผิดซ้ำบ่อยสุดไว้บนสุด · ข้อจะหายไปเองเมื่อลูกตอบถูก</p>' +
+      wrongHTML + '</div>' +
 
       '<div class="q-card">' +
       '<h2 style="font-size:1.15rem">📚 เล่นวิชาไหนเยอะ</h2>' +
@@ -1286,9 +1397,19 @@
         '<p class="muted" style="font-size:.85rem">ด่านที่ตอบถูกน้อยที่สุด (นับเฉพาะด่านที่เล่นไปแล้วอย่างน้อย 6 ข้อ)</p>' +
         '<div class="stat-list">' + weakHTML + '</div></div>' : '') +
 
+      '<div class="q-card">' +
+      '<h2 style="font-size:1.15rem">🕐 เล่นตอนกี่โมง</h2>' +
+      '<p class="muted" style="font-size:.85rem">นับจากจำนวนข้อที่ตอบในแต่ละช่วงเวลา</p>' +
+      hourHTML + '</div>' +
+
       '<button class="btn big blue" data-back="parent">⟵ กลับโหมดพ่อแม่</button>';
 
     wireBack();
+    if ($("#wqBtn")) $("#wqBtn").onclick = function () {
+      var more = $("#wqMore");
+      if (more.hasAttribute("hidden")) { more.removeAttribute("hidden"); this.textContent = "ย่อกลับ ▴"; }
+      else { more.setAttribute("hidden", ""); this.textContent = "ดูอีก " + (wrongs.length - WRONG_SHOW) + " ข้อ ▾"; }
+    };
     $("#toggleTbl").onclick = function () {
       var t = $("#dayTbl"), s = $("#sparkWrap");
       var showTable = t.hasAttribute("hidden");

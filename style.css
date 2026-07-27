@@ -396,8 +396,8 @@ h1 { font-size: 1.9rem; }
 
 /* แท่งเทียบวิชา */
 .dash-list { margin-top: 6px; }
-.dash-row { padding: 10px 0; border-bottom: 1px solid #eceaf3; }   /* เส้นบางๆ สีเดียวถัดจากพื้น ไม่ใช้เส้นประ */
-.dash-row:last-child { border-bottom: none; }
+.dash-row, .hour-row { padding: 10px 0; border-bottom: 1px solid #eceaf3; }   /* เส้นบางๆ สีเดียวถัดจากพื้น ไม่ใช้เส้นประ */
+.dash-row:last-child, .hour-row:last-child { border-bottom: none; }
 .d-name { font-weight: 800; font-size: .98rem; margin-bottom: 6px; }
 .d-track { position: relative; height: 14px; background: #F1ECFB; border-radius: 7px; }
 .d-fill {
@@ -423,6 +423,24 @@ h1 { font-size: 1.9rem; }
   margin-top: 10px; background: #F6F3FC; border-radius: 14px;
   padding: 10px 12px; font-size: .85rem; color: #52514e; font-weight: 600;
 }
+.dash-note.warn { background: #FFF6D9; border: 2px solid var(--yellow); color: #7a5a00; }
+
+/* เดลต้าในช่อง KPI (ขึ้น = ดี) */
+.kpi .k-delta { font-size: .72rem; font-weight: 800; color: #8a8aa0; }
+.kpi .k-delta.up { color: #076107; }
+.kpi .k-delta.down { color: #8f1f1f; }
+
+/* ข้อที่ยังตอบผิด + เฉลย */
+.wq { border: 2px solid #eceaf3; border-radius: 16px; padding: 12px 14px; margin: 10px 0; }
+.wq-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+/* ชิปนับจำนวนครั้งที่ผิดซ้ำ — คนละความหมายกับชิป % ความแม่นยำ จึงแยก class */
+.rep-chip {
+  font-size: .78rem; font-weight: 800; padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+  background: #FBE7E7; color: #8f1f1f; border: 1px solid #d03b3b;
+}
+.wq-q { font-weight: 800; font-size: 1rem; line-height: 1.5; }
+.wq-a { margin-top: 6px; font-weight: 800; color: #076107; background: #E6F6E6; border-radius: 10px; padding: 6px 10px; }
+.wq-e { margin-top: 6px; font-size: .85rem; color: #52514e; font-weight: 600; }
 .dash-empty { text-align: center; }
 
 /* กราฟ 14 วัน — เผื่อที่ให้ป้ายบนยอดแท่งและแถววันที่ ไม่ให้ล้นหรือทับปุ่ม */
