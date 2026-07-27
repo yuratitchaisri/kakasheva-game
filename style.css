@@ -54,6 +54,7 @@ h1 { font-size: 1.9rem; }
 .btn.blue  { background: var(--blue); }
 .btn.pink  { background: var(--pink); }
 .btn.orange{ background: var(--orange); }
+.btn.purple{ background: var(--purple); }
 .btn:disabled { filter: grayscale(.6) opacity(.6); cursor: default; }
 
 .btn-row { display: flex; gap: 10px; }
@@ -144,6 +145,7 @@ h1 { font-size: 1.9rem; }
 .level-node.locked { filter: grayscale(.7) opacity(.65); cursor: default; }
 .level-node.done { border-color: var(--green); }
 .level-node.review { background: #FFF0D6; }
+.level-node.match { background: #EAF3FF; }
 .level-node .num {
   width: 54px; height: 54px; border-radius: 50%; flex: none;
   display: flex; align-items: center; justify-content: center;
@@ -152,6 +154,7 @@ h1 { font-size: 1.9rem; }
 .level-node.done .num { background: var(--green); }
 .level-node.locked .num { background: #b8bcc7; }
 .level-node.review .num { background: var(--orange); }
+.level-node.match .num { background: var(--purple); }
 .level-node .info { flex: 1; }
 .level-node .info .t { font-weight: 800; font-size: 1.1rem; }
 .level-node .info .s { color: #6b6b80; font-size: .9rem; }
@@ -242,6 +245,22 @@ h1 { font-size: 1.9rem; }
   padding: 8px 14px; border-radius: 999px; cursor: pointer; box-shadow: 0 4px 0 rgba(0,0,0,.12);
 }
 
+/* จับคู่คำศัพท์ (match) */
+.match-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.match-col { display: flex; flex-direction: column; gap: 10px; }
+.match-item {
+  font-family: inherit; width: 100%; min-height: 56px;
+  background: #fff; border: 3px solid var(--blue); border-radius: 14px;
+  padding: 10px 8px; font-weight: 800; font-size: 1.05rem; color: var(--ink);
+  cursor: pointer; box-shadow: 0 4px 0 rgba(0,0,0,.1); transition: transform .12s;
+  word-break: break-word;
+}
+.match-item:active { transform: translateY(3px); }
+.match-item.sel { transform: scale(1.05); border-color: var(--pink); background: #FFEBF2; }
+.match-item.done { border-color: var(--green); background: #E8FBEF; opacity: .6; cursor: default; box-shadow: none; }
+.match-item.bad { border-color: var(--pink); background: #FFEBF2; animation: sad .4s ease; }
+.match-item:disabled { cursor: default; }
+
 /* ---------- feedback ---------- */
 .feedback { border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px; box-shadow: var(--shadow); font-weight: 700; }
 .feedback.ok  { background: #E8FBEF; border: 3px solid var(--green); }
@@ -278,6 +297,10 @@ h1 { font-size: 1.9rem; }
 /* ---------- ผลด่าน: บรรทัดดาว/รางวัล ---------- */
 .reward-line.star { color: #E39A00; font-size: 1.4rem; }
 .reward-line.muted-line { color: #6b6b80; font-size: 1rem; font-weight: 700; }
+.reward-line.hint-line {
+  background: #FFF6D9; border: 3px solid var(--yellow); border-radius: 16px;
+  padding: 10px 14px; margin: 8px 0; color: #7a5a00; font-weight: 700; font-size: 1rem;
+}
 .cross-banner {
   background: linear-gradient(90deg, var(--yellow), var(--orange)); color: #7a4a00;
   font-weight: 900; border-radius: 16px; padding: 12px; margin: 10px 0; box-shadow: var(--shadow);
@@ -336,6 +359,7 @@ h1 { font-size: 1.9rem; }
 }
 .pin-box.shake { animation: sad .4s ease; }
 .pin-title { font-weight: 800; font-size: 1.1rem; margin-bottom: 14px; }
+.confirm-detail { color: #4a4a5e; font-weight: 600; margin-bottom: 16px; line-height: 1.5; }
 .pin-dots { display: flex; gap: 14px; justify-content: center; margin-bottom: 18px; }
 .pin-dot { width: 18px; height: 18px; border-radius: 50%; border: 3px solid var(--purple); }
 .pin-dot.on { background: var(--purple); }
@@ -352,6 +376,81 @@ h1 { font-size: 1.9rem; }
 #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 50; overflow: hidden; }
 .confetti-piece { position: absolute; width: 12px; height: 16px; top: -20px; will-change: transform; animation: fall linear forwards; }
 @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+
+/* ---------- 📊 Dashboard พ่อแม่ ----------
+   สีข้อมูล: ม่วง #9B5DE5 สีเดียว (ทุกแท่งวัดค่าเดียวกัน = ไม่ใช้หลายสี)
+   สีสถานะ (ความแม่นยำ) มาคู่กับไอคอน+ข้อความเสมอ ไม่ให้สีสื่อความหมายลำพัง
+   ตัวหนังสือใช้สีหมึกล้วน ไม่ทาสีข้อมูล */
+.dash-root { --viz: #9B5DE5; }
+.dash-ink { color: #2b2b40; }
+
+/* KPI */
+.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0; }
+.kpi {
+  background: var(--card); border-radius: 16px; padding: 10px 6px;
+  text-align: center; box-shadow: var(--shadow);
+}
+.kpi .k-label { font-size: .72rem; color: #6b6b80; font-weight: 700; }
+.kpi .k-value { font-size: 1.5rem; font-weight: 900; color: #2b2b40; line-height: 1.2; }
+.kpi .k-sub { font-size: .72rem; color: #8a8aa0; font-weight: 600; }
+
+/* แท่งเทียบวิชา */
+.dash-list { margin-top: 6px; }
+.dash-row { padding: 10px 0; border-bottom: 1px solid #eceaf3; }   /* เส้นบางๆ สีเดียวถัดจากพื้น ไม่ใช้เส้นประ */
+.dash-row:last-child { border-bottom: none; }
+.d-name { font-weight: 800; font-size: .98rem; margin-bottom: 6px; }
+.d-track { position: relative; height: 14px; background: #F1ECFB; border-radius: 7px; }
+.d-fill {
+  height: 100%; background: #9B5DE5;
+  border-radius: 0 4px 4px 0;   /* ปลายข้อมูลมน ฐานตรง */
+  min-width: 4px;
+}
+.d-val {
+  position: absolute; top: -3px; font-size: .82rem; font-weight: 800;
+  color: #52514e; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.d-val.in { color: #fff; }
+.d-meta { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin-top: 7px; }
+.d-dim { font-size: .78rem; color: #8a8aa0; font-weight: 600; }
+
+/* ชิปความแม่นยำ — สีสถานะ + ไอคอน + ข้อความ */
+.acc-chip { font-size: .78rem; font-weight: 800; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.acc-chip.good { background: #E6F6E6; color: #076107; border: 1px solid #0ca30c; }
+.acc-chip.mid  { background: #FDEDE4; color: #8a441f; border: 1px solid #ec835a; }
+.acc-chip.bad  { background: #FBE7E7; color: #8f1f1f; border: 1px solid #d03b3b; }
+
+.dash-note {
+  margin-top: 10px; background: #F6F3FC; border-radius: 14px;
+  padding: 10px 12px; font-size: .85rem; color: #52514e; font-weight: 600;
+}
+.dash-empty { text-align: center; }
+
+/* กราฟ 14 วัน — เผื่อที่ให้ป้ายบนยอดแท่งและแถววันที่ ไม่ให้ล้นหรือทับปุ่ม */
+.spark {
+  display: flex; align-items: flex-end; gap: 2px;   /* ช่องว่าง 2px คั่นแท่ง ไม่ตีกรอบ */
+  height: 120px; margin: 16px 0 0;
+  border-bottom: 1px solid #d9d5e6;                 /* เส้นฐาน hairline เส้นทึบ */
+}
+.sp-col { flex: 1; height: 100%; position: relative; display: flex; align-items: flex-end; }
+.sp-bar { width: 100%; background: #9B5DE5; border-radius: 4px 4px 0 0; }
+.sp-val {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  font-size: .7rem; font-weight: 800; color: #52514e;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.spark-axis { display: flex; gap: 2px; margin: 4px 0 12px; }
+.spark-axis .sp-day { flex: 1; text-align: center; font-size: .68rem; color: #8a8aa0; font-variant-numeric: tabular-nums; }
+
+/* ตารางแทนกราฟ (อ่านค่าได้โดยไม่ต้องพึ่งสี) */
+.dash-tbl-wrap { overflow-x: auto; margin: 10px 0; }
+.dash-tbl { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.dash-tbl th, .dash-tbl td { padding: 6px 8px; text-align: right; border-bottom: 1px solid #eceaf3; font-variant-numeric: tabular-nums; }
+.dash-tbl th:first-child, .dash-tbl td:first-child { text-align: left; font-variant-numeric: normal; }
+.dash-tbl th { color: #6b6b80; font-weight: 800; }
+
+@media (max-width: 420px) {
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+}
 
 /* ---------- daily streak popup ---------- */
 .toast {
