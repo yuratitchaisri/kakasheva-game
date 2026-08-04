@@ -15,6 +15,7 @@
   var MATCH_PAIRS = 4;        // จำนวนคู่ต่อ 1 บอร์ดจับคู่คำศัพท์
   var MATCH_BOARDS = 5;       // จำนวนบอร์ดสูงสุดต่อ 1 ด่านจับคู่
   var MATCH_ALLOW_MISS = 1;   // จับผิดได้กี่ครั้งต่อบอร์ดถึงยังนับว่าถูก
+  var READ_NEW_COINS = 5;     // เหรียญเมื่ออ่านความรู้ด่านที่ยังไม่เคยอ่านจบ (ด่านละครั้งเดียวตลอดกาล)
 
   // วิชาที่สอนเป็นภาษาอังกฤษ — ใช้เลือกภาษาอ่านออกเสียง + ปลดล็อกด่านจับคู่คำศัพท์
   var EN_SUBJECTS = ["english", "math-inter", "science-inter"];
@@ -88,6 +89,8 @@
     if (!p.daily) p.daily = {};   // สถิติรายวัน (กราฟ 14 วัน)
     if (!p.qstat) p.qstat = {};   // สถิติรายข้อ [ตอบกี่ครั้ง, ผิดกี่ครั้ง] — ไว้หาข้อที่ผิดซ้ำ
     if (!p.hours) p.hours = {};   // นับตามชั่วโมงที่ตอบ — ไว้ดูว่าเล่นตอนไหน
+    // การอ่านความรู้ก่อนเล่น: streak = วันที่อ่านติดกัน · days = วันไหนอ่านไปกี่ด่าน · seen = ด่านไหนอ่านจบแล้ว
+    if (!p.read) p.read = { streak: { count: 0, lastDay: null }, days: {}, seen: {} };
     return p;
   }
 
@@ -164,6 +167,7 @@
     p.levels = {}; p.wrong = {};
     p.starBank = 0; p.ledger = [];
     p.stats = {}; p.daily = {}; p.qstat = {}; p.hours = {};
+    p.read = { streak: { count: 0, lastDay: null }, days: {}, seen: {} };
     persist();
   }
 
@@ -458,14 +462,150 @@
 
     wireBack();
     $all(".level-node").forEach(function (el) {
-      if (el.classList.contains("locked")) return;
+      var lv = el.getAttribute("data-level");
+      var locked = el.classList.contains("locked");
+      // ด่านที่ล็อกยังกดได้ ถ้ามีบทเรียน — ให้เด็กอ่านเรื่องที่ยังไม่ได้เรียนล่วงหน้าได้ (แต่ยังเล่นไม่ได้)
+      if (locked && !(lv !== null && lessonFor(quiz, parseInt(lv, 10)))) return;
       el.onclick = function () {
         if (el.getAttribute("data-review")) startReview(quiz);
         else if (el.getAttribute("data-match")) startMatch(quiz, parseInt(el.getAttribute("data-match"), 10));
-        else startLevel(quiz, parseInt(el.getAttribute("data-level"), 10));
+        else {
+          var idx = parseInt(lv, 10);
+          if (lessonFor(quiz, idx)) screenStageIntro(quiz, idx, locked);
+          else startLevel(quiz, idx);
+        }
       };
     });
     $("[data-shop]").onclick = screenShop;
+  }
+
+  // ---------- อ่านความรู้ก่อนเล่น ----------
+  function lessonFor(quiz, idx) {
+    var byQuiz = (window.LESSON_DATA || {})[quiz.id];
+    return (byQuiz && byQuiz[String(idx)]) || null;
+  }
+  function lessonDone(p, quizId, idx) {
+    return !!((p.read.seen[quizId] || {})[String(idx)]);
+  }
+
+  // หน้าถามก่อนเข้าด่าน: จะอ่านความรู้ก่อน หรือเล่นเลย
+  function screenStageIntro(quiz, idx, locked) {
+    var p = profile(current);
+    var lesson = lessonFor(quiz, idx);
+    var done = lessonDone(p, quiz.id, idx);
+    var rec = levelRecord(p, quiz.id, idx);
+
+    root.innerHTML = hudHTML(p, "map") +
+      '<div class="world-head"><div class="big-emoji buddy-bounce">' + (lesson.emoji || "📖") + '</div>' +
+      '<h2>' + esc(stageTitle(quiz, idx)) + '</h2>' +
+      '<p class="muted">' + esc(quiz.subject) + (rec.done ? ' · ผ่านด่านนี้แล้ว' : (locked ? ' · ด่านนี้ยังล็อกอยู่' : '')) + '</p></div>' +
+      '<div class="q-card center">' +
+      '<p class="intro-q">' + (locked
+        ? 'ด่านนี้ยังเล่นไม่ได้ ต้องผ่านด่านก่อนหน้าก่อน<br>แต่อ่านความรู้ล่วงหน้าได้เลยนะ 😊'
+        : 'จะอ่านความรู้ก่อน หรือเล่นเลยดี?') + '</p>' +
+      (done ? '<p class="read-badge">📖 อ่านด่านนี้จบแล้ว ✅</p>' : '') +
+      '<button class="btn big green" id="goRead">📖 อ่านความรู้ก่อน</button>' +
+      (locked ? '' : '<button class="btn big blue" id="goPlay">เริ่มเล่นเลย ▶</button>') +
+      '</div>';
+
+    wireBack();
+    $("#goRead").onclick = function () { screenLesson(quiz, idx, locked); };
+    if ($("#goPlay")) $("#goPlay").onclick = function () { startLevel(quiz, idx); };
+  }
+
+  function lessonBlocksHTML(lesson) {
+    return (lesson.blocks || []).map(function (b) {
+      if (b.t === "h") return '<h3>' + esc(b.x) + '</h3>';
+      if (b.t === "p") return '<p>' + esc(b.x) + '</p>';
+      if (b.t === "ul") return '<ul>' + b.x.map(function (li) { return '<li>' + esc(li) + '</li>'; }).join("") + '</ul>';
+      if (b.t === "tip") return '<div class="lesson-tip">💡 ' + esc(b.x) + '</div>';
+      if (b.t === "ex") return '<div class="lesson-ex">✏️ ' + esc(b.x) + '</div>';
+      if (b.t === "table") {
+        return '<div class="lesson-tbl-wrap"><table class="lesson-tbl"><tr>' +
+          b.head.map(function (h) { return '<th>' + esc(h) + '</th>'; }).join("") + '</tr>' +
+          b.rows.map(function (r) {
+            return '<tr>' + r.map(function (c) { return '<td>' + esc(c) + '</td>'; }).join("") + '</tr>';
+          }).join("") + '</table></div>';
+      }
+      return "";
+    }).join("");
+  }
+
+  // แปลงบทเรียนเป็นข้อความยาวๆ ให้เครื่องอ่านออกเสียง
+  function lessonSpeakText(lesson) {
+    var parts = [lesson.title];
+    (lesson.blocks || []).forEach(function (b) {
+      if (b.t === "ul") parts = parts.concat(b.x);
+      else if (b.t === "table") b.rows.forEach(function (r) { parts.push(r.join(" ")); });
+      else if (b.x) parts.push(b.x);
+    });
+    return parts.join(". ");
+  }
+
+  function screenLesson(quiz, idx, locked) {
+    var p = profile(current);
+    var lesson = lessonFor(quiz, idx);
+
+    root.innerHTML = hudHTML(p, "map") +
+      '<div class="q-card lesson-body">' +
+      '<div class="lesson-head"><span class="big-emoji">' + (lesson.emoji || "📖") + '</span>' +
+      '<h2>' + esc(lesson.title) + '</h2>' +
+      '<button class="speak-btn" id="speakLesson">🔊 อ่านให้ฟัง</button></div>' +
+      lessonBlocksHTML(lesson) +
+      '</div>' +
+      '<div id="readEnd"><button class="btn big green" id="doneRead">อ่านจบแล้ว! ✓</button></div>' +
+      '<button class="btn big blue" data-back="map">⟵ กลับแผนที่</button>';
+
+    wireBack();
+    $("#speakLesson").onclick = function () { speak(lessonSpeakText(lesson), isEnSubject(quiz) ? "en-US" : "th-TH"); };
+    $("#doneRead").onclick = function () {
+      stopSpeak();
+      finishReading(quiz, idx);
+      $("#readEnd").innerHTML = '<div class="feedback ok"><div class="head">📖 เก่งมาก! อ่านจบแล้ว</div>' +
+        '<div>ลองเอาไปใช้ในด่านนี้เลย</div></div>' +
+        (locked ? '' : '<button class="btn big blue" id="playNow">เล่นด่านนี้เลย ▶</button>');
+      if ($("#playNow")) $("#playNow").onclick = function () { startLevel(quiz, idx); };
+      $("#readEnd").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    };
+  }
+
+  // บันทึกว่าอ่านจบ + ให้รางวัล (ให้เหรียญตรงๆ ไม่ผ่าน session จะได้ไม่โดนคืนตอนออกกลางด่าน)
+  function finishReading(quiz, idx) {
+    var p = profile(current);
+    var today = todayStr();
+    var gained = 0;
+
+    // ด่านที่ยังไม่เคยอ่านจบ → ได้เหรียญครั้งเดียวตลอดกาล (อ่านซ้ำได้แต่ไม่ได้เหรียญอีก)
+    if (!p.read.seen[quiz.id]) p.read.seen[quiz.id] = {};
+    if (!p.read.seen[quiz.id][String(idx)]) {
+      p.read.seen[quiz.id][String(idx)] = today;
+      p.coins += READ_NEW_COINS;
+      gained += READ_NEW_COINS;
+    }
+
+    // ครั้งแรกของวัน → นับวันอ่านติดกัน + โบนัส
+    var firstToday = p.read.streak.lastDay !== today;
+    if (firstToday) {
+      if (p.read.streak.lastDay === dayStr(-1)) p.read.streak.count += 1;
+      else p.read.streak.count = 1;
+      p.read.streak.lastDay = today;
+      var bonus = 10 + Math.min(p.read.streak.count, 7) * 5;
+      p.coins += bonus;
+      gained += bonus;
+    }
+
+    p.read.days[today] = (p.read.days[today] || 0) + 1;
+    dayStat(p, today).r = (dayStat(p, today).r || 0) + 1;
+    trimDaily(p);
+    persist();
+
+    var chip = $(".hud .coins"); if (chip) chip.textContent = "🪙 " + p.coins;
+    if (gained > 0) {
+      soundReward();
+      toast(firstToday
+        ? "📖 อ่านหนังสือวันที่ " + p.read.streak.count + " ได้ +" + gained + " 🪙"
+        : "📖 อ่านครบด่านใหม่ ได้ +" + gained + " 🪙");
+    }
   }
 
   // ---------- เริ่มด่าน ----------
@@ -645,11 +785,13 @@
   function wireFill(q) {
     var slots = $all(".blank-slot");
     var fills = new Array(slots.length).fill(null); // word string per slot
+    var checked = false;                            // ตรวจแล้วห้ามแก้/ห้ามตรวจซ้ำ (ผิดคือผิดเลย)
     function refresh() {
       $("#checkFill").disabled = fills.indexOf(null) >= 0;
     }
     $all(".word-chip").forEach(function (chip) {
       chip.onclick = function () {
+        if (checked) return;
         if (chip.classList.contains("used")) return;
         var slot = fills.indexOf(null);
         if (slot < 0) return;
@@ -664,6 +806,7 @@
     });
     slots.forEach(function (sEl, idx) {
       sEl.onclick = function () {
+        if (checked) return;
         if (fills[idx] == null) return;
         var w = fills[idx];
         fills[idx] = null; sEl.textContent = ""; sEl.classList.remove("filled");
@@ -674,12 +817,15 @@
       };
     });
     $("#checkFill").onclick = function () {
+      if (checked) return;
+      checked = true;
       var ok = true, i;
       for (i = 0; i < q.blanks.length; i++) {
         if (q.blanks[i].indexOf(fills[i]) < 0) { ok = false; break; }
       }
+      // ระบายสีถูก/ผิดรายช่อง
       slots.forEach(function (sEl, idx) {
-        sEl.classList.add(q.blanks[idx].indexOf(fills[idx]) >= 0 ? "filled" : "");
+        sEl.classList.add(q.blanks[idx].indexOf(fills[idx]) >= 0 ? "good" : "bad");
       });
       $all(".word-chip").forEach(function (c) { c.disabled = true; });
       $("#checkFill").style.display = "none";
@@ -1226,6 +1372,37 @@
     });
   }
 
+  // สรุปการอ่านความรู้ (นับเฉพาะวิชาที่มีบทเรียนใน LESSON_DATA)
+  function readStats(p) {
+    var out = { days: Object.keys(p.read.days).length, streak: p.read.streak.count, total: 0, done: 0, subjects: [] };
+    quizzesFor(current).forEach(function (q) {
+      var ls = (window.LESSON_DATA || {})[q.id];
+      if (!ls) return;
+      var n = Object.keys(ls).length;
+      var d = Object.keys(p.read.seen[q.id] || {}).length;
+      out.total += n; out.done += d;
+      out.subjects.push({ emoji: q.emoji, subject: q.subject, n: n, d: d });
+    });
+    return out;
+  }
+  function readCardHTML(p) {
+    var rs = readStats(p);
+    if (!rs.total) return "";
+    var rows = rs.subjects.map(function (s) {
+      var w = Math.round(s.d / s.n * 100);
+      return '<div class="dash-row"><div class="d-name">' + s.emoji + ' ' + esc(s.subject) + '</div>' +
+        '<div class="d-track"><div class="d-fill" style="width:' + Math.max(3, w) + '%"></div>' +
+        '<span class="d-val" style="left:calc(' + Math.max(3, w) + '% + 8px)">' + s.d + '/' + s.n + '</span></div></div>';
+    }).join("");
+    return '<div class="q-card">' +
+      '<h2 style="font-size:1.15rem">📖 การอ่านความรู้</h2>' +
+      '<p class="muted" style="font-size:.85rem">เด็กกดอ่านบทเรียนก่อนเล่นด่านได้ (จะอ่านหรือไม่อ่านก็ได้) — ได้เหรียญเล็กน้อย ไม่ได้ ⭐</p>' +
+      '<div class="stat-row"><span>อ่านมาแล้ว</span><span><b>' + rs.days + '</b> วัน</span></div>' +
+      '<div class="stat-row"><span>อ่านติดกันตอนนี้</span><span><b>' + rs.streak + '</b> วัน 🔥</span></div>' +
+      '<div class="stat-row"><span>อ่านครบแล้ว</span><span><b>' + rs.done + '</b> / ' + rs.total + ' ด่าน</span></div>' +
+      '<div class="dash-list">' + rows + '</div></div>';
+  }
+
   function screenDash() {
     var p = profile(current);
     var rows = dashRows(p);
@@ -1239,6 +1416,7 @@
         '<div class="q-card dash-empty"><div class="big-emoji">🌱</div>' +
         '<p>ยังไม่มีข้อมูลของ <b>' + esc(current) + '</b></p>' +
         '<p class="muted">สถิติจะเริ่มเก็บตั้งแต่ตอนนี้ — ให้ลูกเล่นสัก 1-2 ด่านแล้วกลับมาดูใหม่นะครับ</p></div>' +
+        readCardHTML(p) +
         '<button class="btn big blue" data-back="parent">⟵ กลับโหมดพ่อแม่</button>';
       wireBack();
       return;
@@ -1311,10 +1489,11 @@
       var show = idx === 0 || idx === dayKeys.length - 1 || idx % 3 === 0;
       return '<span class="sp-day">' + (show ? k.split("-")[2] : "") + '</span>';
     }).join("");
-    var dayTable = '<table class="dash-tbl"><tr><th>วันที่</th><th>ตอบ</th><th>ถูก</th><th>เวลา</th></tr>' +
+    var dayTable = '<table class="dash-tbl"><tr><th>วันที่</th><th>ตอบ</th><th>ถูก</th><th>เวลา</th><th>อ่าน</th></tr>' +
       dayKeys.map(function (k, idx) {
         var d = p.daily[k] || { a: 0, c: 0, sec: 0 };
-        return '<tr><td>' + k + '</td><td>' + d.a + '</td><td>' + (d.a ? Math.round(d.c / d.a * 100) + '%' : '—') + '</td><td>' + fmtDur(d.sec) + '</td></tr>';
+        return '<tr><td>' + k + '</td><td>' + d.a + '</td><td>' + (d.a ? Math.round(d.c / d.a * 100) + '%' : '—') + '</td><td>' + fmtDur(d.sec) + '</td>' +
+          '<td>' + (d.r ? d.r + ' 📖' : '—') + '</td></tr>';
       }).join("") + '</table>';
 
     // ---- ด่านที่ควรติว ----
@@ -1401,6 +1580,8 @@
       '<h2 style="font-size:1.15rem">🕐 เล่นตอนกี่โมง</h2>' +
       '<p class="muted" style="font-size:.85rem">นับจากจำนวนข้อที่ตอบในแต่ละช่วงเวลา</p>' +
       hourHTML + '</div>' +
+
+      readCardHTML(p) +
 
       '<button class="btn big blue" data-back="parent">⟵ กลับโหมดพ่อแม่</button>';
 
