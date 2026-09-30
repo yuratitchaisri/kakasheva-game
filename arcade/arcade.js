@@ -10,19 +10,11 @@
   var FONT = '"Mali","Thonburi","Leelawadee UI","Noto Sans Thai",system-ui,sans-serif';
   var app = document.getElementById('app');
 
-  // ---------- ตัวละคร (ร้านค้า) ----------
-  var HEROES = [
-    { e: '🦊', n: 'จิ้งจอกซิ่ง', p: 0 }, { e: '🐰', n: 'กระต่ายเหาะ', p: 0 },
-    { e: '🐱', n: 'แมวเหมียว', p: 300 }, { e: '🐶', n: 'น้องหมา', p: 300 },
-    { e: '🐸', n: 'กบกระโดด', p: 600 }, { e: '🐼', n: 'แพนด้า', p: 600 },
-    { e: '🐧', n: 'เพนกวิน', p: 800 }, { e: '🐵', n: 'ลิงจอมซน', p: 800 },
-    { e: '🐯', n: 'เสือน้อย', p: 1200 }, { e: '🦁', n: 'สิงโต', p: 1200 },
-    { e: '🤖', n: 'หุ่นยนต์', p: 1600 }, { e: '🦄', n: 'ยูนิคอร์น', p: 1800 },
-    { e: '🧚', n: 'นางฟ้า', p: 2000 }, { e: '🐲', n: 'มังกร', p: 2400 },
-    { e: '🦖', n: 'ไดโนเสาร์', p: 2400 }, { e: '🦸', n: 'ซูเปอร์ฮีโร่', p: 3000 },
-    { e: '🥷', n: 'นินจา', p: 3000 }, { e: '👑', n: 'ราชาแห่งการสอบ', p: 5000 }
-  ];
-  var DEFAULT_HERO = { Kaka: '🦊', Sheva: '🐰' };
+  // ---------- ตัวละครบล็อกสไตล์ Roblox (web/arcade/blocky.js) ----------
+  var SK = window.Blocky;
+  var HEROES = SK.SKINS;
+  function heroImg(id, px) { return '<img class="av" src="' + SK.img(id, px * 2) + '" width="' + px + '" height="' + px + '" alt="">'; }
+  var DEFAULT_HERO = { Kaka: 'noob', Sheva: 'bacon' };
 
   // ---------- ธีมของแต่ละวิชา ----------
   var THEMES = {
@@ -54,8 +46,10 @@
   function K(name) {
     var k = S.kids[name];
     if (!k) {
-      k = S.kids[name] = { coins: 0, hero: DEFAULT_HERO[name] || '🦊', owned: [DEFAULT_HERO[name] || '🦊'], stars: {}, wrong: {}, subj: {}, days: {}, gift: '' };
+      k = S.kids[name] = { coins: 0, hero: DEFAULT_HERO[name] || 'noob', owned: [], stars: {}, wrong: {}, subj: {}, days: {}, gift: '' };
     }
+    if (!SK.BY[k.hero]) k.hero = DEFAULT_HERO[name] || 'noob';   // เซฟเก่าที่เป็นอีโมจิ
+    k.owned = (k.owned || []).filter(function (id) { return SK.BY[id]; });
     return k;
   }
   function today() { var d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
@@ -251,7 +245,7 @@
       '<p class="sub">' + esc(DATA.title || 'ทบทวนสอบ') + ' · วิ่งชนประตูคำตอบที่ถูก ถล่มบอส!</p><div class="kids">';
     names.forEach(function (n) {
       var info = kidInfo(n), k = K(n), ts = totalStars(n);
-      h += '<button class="kidcard" data-act="kid" data-kid="' + esc(n) + '"><div class="hero">' + k.hero + '</div><b>' + esc(info.label || n) + '</b>' +
+      h += '<button class="kidcard" data-act="kid" data-kid="' + esc(n) + '"><div class="hero">' + heroImg(k.hero, 120) + '</div><b>' + esc(info.label || n) + '</b>' +
         '<div class="meta">' + esc(info.grade || '') + '</div><div class="meta">💎 ' + k.coins + ' · ⭐ ' + ts.got + '/' + ts.max + '</div></button>';
     });
     h += '</div><div class="homefoot"><button class="btn small gray" data-act="parent">👨‍👩‍👧 สำหรับพ่อแม่</button>' +
@@ -267,7 +261,7 @@
   }
 
   function renderWorld() {
-    var info = kidInfo(cur.kid), k = K(cur.kid), h = topbar(k.hero + ' ' + esc(info.label || cur.kid) + ' · เลือกโลก', 'home');
+    var info = kidInfo(cur.kid), k = K(cur.kid), h = topbar(heroImg(k.hero, 34) + ' ' + esc(info.label || cur.kid) + ' · เลือกโลก', 'home');
     h += '<div class="worlds">';
     (info.subjects || []).forEach(function (s, i) {
       var th = theme(s.key), st = subjStars(cur.kid, s), bossDone = (k.stars[s.key + ':boss'] || 0) > 0;
@@ -336,8 +330,8 @@
     var k = K(cur.kid);
     var h = topbar('🛒 ร้านฮีโร่', cur.shopBack || 'world') + '<div class="shop">';
     HEROES.forEach(function (x, i) {
-      var own = k.owned.indexOf(x.e) >= 0, on = k.hero === x.e;
-      h += '<div class="item' + (on ? ' on' : '') + '"><div class="em">' + x.e + '</div><b>' + esc(x.n) + '</b>' +
+      var own = x.p === 0 || k.owned.indexOf(x.id) >= 0, on = k.hero === x.id;
+      h += '<div class="item' + (on ? ' on' : '') + '"><div class="em">' + heroImg(x.id, 110) + '</div><b>' + esc(x.n) + '</b>' +
         (on ? '<span class="pill">✅ ใช้อยู่</span>' : own ? '<button class="btn small green" data-act="wear" data-i="' + i + '">ใช้ตัวนี้</button>' :
           '<button class="btn small' + (k.coins >= x.p ? '' : ' gray') + '" data-act="buy" data-i="' + i + '">💎 ' + x.p + '</button>') + '</div>';
     });
@@ -357,7 +351,7 @@
       var days = Object.keys(k.days).sort().slice(-7);
       var tq = 0, tok = 0; days.forEach(function (d) { tq += k.days[d].q; tok += k.days[d].ok; });
       var td = k.days[today()] || { sec: 0 };
-      h += '<div class="card"><h3>' + k.hero + ' ' + esc(info.label || n) + ' ' + esc(info.grade || '') + '</h3><div class="kv">' +
+      h += '<div class="card"><h3>' + heroImg(k.hero, 30) + ' ' + esc(info.label || n) + ' ' + esc(info.grade || '') + '</h3><div class="kv">' +
         '<div>เล่นวันนี้<b>' + Math.round(td.sec / 60) + ' นาที</b></div>' +
         '<div>ตอบ 7 วันล่าสุด<b>' + tq + ' ข้อ</b></div>' +
         '<div>ถูก (7 วัน)<b>' + (tq ? Math.round(100 * tok / tq) : 0) + '%</b></div>' +
@@ -413,10 +407,10 @@
     else if (act === 'buy') {
       var x = HEROES[+t.getAttribute('data-i')], k = K(cur.kid);
       if (k.coins < x.p) { modalMenu('<div class="big">💎</div><h2>เพชรยังไม่พอ</h2><p class="q">ขาดอีก ' + (x.p - k.coins) + ' เพชร — ไปวิ่งเก็บเพิ่มกัน!</p><div class="row"><button class="btn" data-close>ไปวิ่ง!</button></div>'); return; }
-      k.coins -= x.p; k.owned.push(x.e); k.hero = x.e; save(); SFX.win(); renderShop();
-      modalMenu('<div class="big" style="font-size:110px">' + x.e + '</div><h2>ได้ ' + esc(x.n) + ' แล้ว!</h2><div class="row"><button class="btn green" data-close>เจ๋ง!</button></div>');
+      k.coins -= x.p; k.owned.push(x.id); k.hero = x.id; save(); SFX.win(); renderShop();
+      modalMenu('<div class="big">' + heroImg(x.id, 170) + '</div><h2>ได้ ' + esc(x.n) + ' แล้ว!</h2><div class="row"><button class="btn green" data-close>เจ๋ง!</button></div>');
     }
-    else if (act === 'wear') { K(cur.kid).hero = HEROES[+t.getAttribute('data-i')].e; save(); renderShop(); }
+    else if (act === 'wear') { K(cur.kid).hero = HEROES[+t.getAttribute('data-i')].id; save(); renderShop(); }
     else if (act === 'sound') { S.settings.sound = !S.settings.sound; save(); renderHome(); }
     else if (act === 'parent') { parentGate(function () { go('parent'); }); }
     else if (act === 'bonus') { K(t.getAttribute('data-kid')).coins += 50; save(); renderParent(); }
@@ -445,7 +439,7 @@
     G = new Game(cur.kid, cur.subj, li);
   }
 
-  var Z_NEAR = 3, FAR = 70;
+  var Z_NEAR = 3, FAR = 70, STOP_Z = 6;
 
   function Game(kid, subj, li) {
     var g = this;
@@ -455,8 +449,9 @@
     g.maxHp = g.queue.reduce(function (s, it) { return s + (it.kind === 'blast' ? 2 : 1); }, 0);
     g.hearts = g.beg ? 4 : 3; g.maxHearts = g.hearts;
     g.coins = 0; g.mist = 0; g.okN = 0; g.combo = 0; g.missed = []; g.requeued = {};
-    g.speed = g.beg ? 8 : 10; g.dist = 0; g.t = 0;
-    g.player = { lane: 0, x: 0, jump: 0, jv: 0, stun: 0, run: 0 };
+    g.speed = g.beg ? 6 : 7.5; g.dist = 0; g.t = 0;
+    g.player = { lane: 0, x: 0, jump: 0, jv: 0, stun: 0, run: 0, scale: 1, ts: 1 };
+    g.morph = 0; g.morphUp = true;
     g.objs = []; g.parts = []; g.shots = []; g.bubbles = [];
     g.gate = null; g.cooldown = 1.5; g.state = 'intro';
     g.nextCoin = 6; g.nextRock = 25; g.nextDeco = 0;
@@ -474,13 +469,13 @@
       '<div class="bosshp"><span>' + g.th.boss + '</span><div class="b"><i></i></div></div><span class="coins">💎 0</span></div>' +
       '<div class="qbox hidden"><button class="say" data-g="say">🔊</button><div class="qt"></div><svg class="clock" viewBox="0 0 100 100" style="display:none"></svg></div>' +
       '<div class="cards3 hidden"><button class="c0" data-g="lane" data-l="-1"></button><button class="c1" data-g="lane" data-l="0"></button><button class="c2" data-g="lane" data-l="1"></button></div>' +
-      '<button class="jumpbtn" data-g="jump">⤴️</button>';
+      '<div class="askhint hidden">👆 แตะเลือกคำตอบ</div><button class="jumpbtn" data-g="jump">⤴️</button>';
     document.body.appendChild(el);
     g.el = el; g.cv = el.querySelector('canvas'); g.cx = g.cv.getContext('2d');
     g.qbox = el.querySelector('.qbox'); g.qt = el.querySelector('.qt'); g.clockEl = el.querySelector('.clock');
     g.cards = el.querySelector('.cards3'); g.cardBtns = g.cards.querySelectorAll('button');
     g.heartsEl = el.querySelector('.hearts'); g.hpEl = el.querySelector('.bosshp i'); g.coinEl = el.querySelector('.coins');
-    g.jumpBtn = el.querySelector('.jumpbtn');
+    g.jumpBtn = el.querySelector('.jumpbtn'); g.askEl = el.querySelector('.askhint');
     g.updHud();
     g.resize = g.resize.bind(g); window.addEventListener('resize', g.resize); g.resize();
 
@@ -490,30 +485,31 @@
       if (a === 'pause') g.pause();
       else if (a === 'say') g.sayQ(true);
       else if (a === 'jump') g.doJump();
-      else if (a === 'lane') g.setLane(+b.getAttribute('data-l'));
+      else if (a === 'lane') g.choose(+b.getAttribute('data-l'));
     });
     // สัมผัส: ปัดซ้าย/ขวา = เปลี่ยนเลน · ปัดขึ้น = กระโดด · แตะ = ไปเลนนั้น / ยิงฟอง
     var sx = 0, sy = 0, st = 0;
     g.cv.addEventListener('pointerdown', function (e) { sx = e.clientX; sy = e.clientY; st = Date.now(); if (g.state === 'blast') g.tapBubble(e.clientX, e.clientY); });
     g.cv.addEventListener('pointerup', function (e) {
-      if (g.state !== 'run') return;
-      var dx = e.clientX - sx, dy = e.clientY - sy;
-      if (Math.abs(dx) > 35 && Math.abs(dx) > Math.abs(dy)) g.setLane(g.player.lane + (dx > 0 ? 1 : -1));
-      else if (dy < -35) g.doJump();
+      if (g.state !== 'run' && g.state !== 'ask') return;
+      var dx = e.clientX - sx, dy = e.clientY - sy, ask = g.state === 'ask';
+      if (Math.abs(dx) > 35 && Math.abs(dx) > Math.abs(dy)) { var nl = g.player.lane + (dx > 0 ? 1 : -1); if (ask) g.choose(nl); else g.setLane(nl); }
+      else if (dy < -35 && !ask) g.doJump();
       else if (Date.now() - st < 400) {
-        var w = g.W, lw = g.laneW;
-        g.setLane(e.clientX < w / 2 - lw / 2 ? -1 : e.clientX > w / 2 + lw / 2 ? 1 : 0);
+        var w = g.W, lw = g.laneW, tl = e.clientX < w / 2 - lw / 2 ? -1 : e.clientX > w / 2 + lw / 2 ? 1 : 0;
+        if (g.gate && !g.gate.chosen) g.choose(tl); else g.setLane(tl);
       }
     });
     g.onKey = function (e) {
       if (!G || G !== g) return;
-      if (e.key === 'ArrowLeft') g.setLane(g.player.lane - 1);
-      else if (e.key === 'ArrowRight') g.setLane(g.player.lane + 1);
+      if (e.key === 'ArrowLeft') { if (g.state === 'ask') g.choose(g.player.lane - 1); else g.setLane(g.player.lane - 1); }
+      else if (e.key === 'ArrowRight') { if (g.state === 'ask') g.choose(g.player.lane + 1); else g.setLane(g.player.lane + 1); }
+      else if (e.key === 'Enter' && g.state === 'ask') g.choose(g.player.lane);
       else if (e.key === 'ArrowUp' || e.key === ' ') g.doJump();
       else if (e.key === 'Escape') g.pause();
     };
     window.addEventListener('keydown', g.onKey);
-    g.onVis = function () { if (document.hidden && (g.state === 'run' || g.state === 'blast')) g.pause(); };
+    g.onVis = function () { if (document.hidden && (g.state === 'run' || g.state === 'blast' || g.state === 'ask')) g.pause(); };
     document.addEventListener('visibilitychange', g.onVis);
     g.last = performance.now();
     g.loop = g.loop.bind(g); g.raf = requestAnimationFrame(g.loop);
@@ -561,9 +557,9 @@
 
   Game.prototype.intro = function () {
     var g = this;
-    g.modal('<div class="big">' + g.th.boss + '</div><h2>' + esc(g.lvTitle) + '</h2>' +
+    g.modal('<div class="big">' + heroImg(K(g.kid).hero, 110) + ' <span style="font-size:40px">⚔️</span> <img class="av" width="110" height="110" src="' + bossImg(g.subj.key) + '"></div><h2>' + esc(g.lvTitle) + '</h2>' +
       '<p class="q">' + esc(g.th.bossName) + ' มาแล้ว!<br>วิ่งเข้า <b>ประตูคำตอบที่ถูก</b> เพื่อยิงบอส 🔥</p>' +
-      '<p class="ex">👆 แตะซ้าย/กลาง/ขวา หรือแตะการ์ดคำตอบ = ย้ายเลน · ⤴️ = กระโดดข้ามสิ่งกีดขวาง' + (g.queue.some(function (x) { return x.kind === 'blast'; }) ? '<br>🎯 ด่านฟอง: แตะเฉพาะฟองที่ตรงกติกา' : '') + '</p>' +
+      '<p class="ex">⏸ เกมจะ<b>หยุดรอ</b>ให้เลือกคำตอบ ไม่ต้องรีบ · 👆 แตะการ์ดคำตอบ (หรือแตะประตู)<br>✅ ตอบถูก = ตัวใหญ่ขึ้น 💪 · ❌ ตอบผิด = ตัวเล็กลง · ⤴️ = กระโดดข้ามสิ่งกีดขวาง' + (g.queue.some(function (x) { return x.kind === 'blast'; }) ? '<br>🎯 ด่านฟอง: แตะเฉพาะฟองที่ตรงกติกา' : '') + '</p>' +
       '<div class="row"><button class="btn green" data-m="go">▶ เริ่มเลย!</button></div>', function (a) {
         if (a === 'go') { audio(); g.countdown(); }
       });
@@ -586,7 +582,7 @@
   Game.prototype.closeModal = function () { if (this.modalEl) { this.modalEl.remove(); this.modalEl = null; } };
 
   Game.prototype.pause = function () {
-    var g = this; if (g.state !== 'run' && g.state !== 'blast') return;
+    var g = this; if (g.state !== 'run' && g.state !== 'blast' && g.state !== 'ask') return;
     g.prevState = g.state; g.state = 'pause'; hush();
     g.modal('<div class="big">⏸</div><h2>พักแป๊บนึง</h2><div class="row"><button class="btn gray" data-m="quit">🚪 ออกจากด่าน</button><button class="btn green" data-m="resume">▶ เล่นต่อ</button></div>', function (a) {
       if (a === 'resume') { g.state = g.prevState; g.last = performance.now(); }
@@ -605,8 +601,16 @@
     if (sec > 0 && sec < 3600) { dayRec(K(g.kid)).sec += sec; g.playSec += sec; }
   };
 
+  // เลือกคำตอบ (แตะการ์ด/แตะประตู) → ล็อกเลน แล้ววิ่งต่อผ่านประตูนั้น
+  Game.prototype.choose = function (l) {
+    var g = this;
+    if (!g.gate || g.gate.chosen || (g.state !== 'run' && g.state !== 'ask')) return;
+    l = clamp(l, -1, 1); g.gate.chosen = true; g.player.lane = l; g.markCard(); SFX.click();
+    g.askEl.classList.add('hidden'); g.cards.classList.remove('asking');
+    if (g.state === 'ask') g.state = 'run';
+  };
   Game.prototype.setLane = function (l) {
-    var g = this; if (g.state !== 'run') return;
+    var g = this; if (g.state !== 'run' || (g.gate && g.gate.chosen)) return;   // เลือกคำตอบแล้ว = ล็อกเลน
     l = clamp(l, -1, 1); if (l === g.player.lane) return;
     g.player.lane = l; tone(500 + l * 80, 0.05, 'sine', 0.05); g.markCard();
   };
@@ -625,9 +629,9 @@
     if (!it) { g.win(); return; }
     if (it.kind === 'blast') { g.startBlast(it.s); return; }
     var q = it.q, labels = shuffle(q.c);
-    var len = stripEmoji(q.q).length + labels.join('').length;
-    var T = g.beg ? clamp(6 + len * 0.07, 9, 16) : clamp(3.5 + len * 0.05, 6, 12);
-    g.gate = { q: q, labels: labels, right: labels.indexOf(q.c[0]) - 1, z: g.speed * T, item: it };
+    // ประตูโผล่ไม่ไกล แล้ววิ่งมาหยุดรอตรงหน้า (STOP_Z) จนกว่าจะเลือกคำตอบ — ไม่มีจับเวลา
+    g.gate = { q: q, labels: labels, right: labels.indexOf(q.c[0]) - 1, z: 24, item: it, chosen: false };
+    g.objs = g.objs.filter(function (o) { return o.k !== 'rock' || o.z < 16 || o.z > 31; });
     g.qt.textContent = q.q;
     g.qbox.classList.remove('hidden', 'rule');
     if (q.clock) { g.clockEl.style.display = ''; g.clockEl.innerHTML = clockSvg(q.clock); } else g.clockEl.style.display = 'none';
@@ -650,6 +654,14 @@
     }
     speak(parts, en ? 'en' : 'th');
   };
+
+  var bossCache = {};
+  function bossImg(key) {
+    if (bossCache[key]) return bossCache[key];
+    var cv = document.createElement('canvas'); cv.width = cv.height = 220;
+    SK.draw(cv.getContext('2d'), SK.BOSSES[key] || SK.BOSSES.thai, 110, 214, 190, {});
+    return (bossCache[key] = cv.toDataURL());
+  }
 
   function clockSvg(hm) {
     var p = String(hm).split(':'), h = (+p[0]) % 12, m = +p[1] || 0;
@@ -674,12 +686,13 @@
       SFX.good(); g.burst(px, py - 80, ['⭐', '✨', '🎉'], 14);
       g.toast(pick(['เยี่ยม!', 'ถูกต้อง!', 'สุดยอด!', 'เก่งมาก!', 'ว้าว!']) + (g.combo > 2 ? ' x' + g.combo : '') + ' +' + gain, 900, '#16a34a');
       g.shots.push({ x: px, y: py - 60, t: 0 });
-      if (!g.beg) g.speed = Math.min(15, g.speed + 0.3);
+      g.grow(true);
+      if (!g.beg) g.speed = Math.min(11, g.speed + 0.2);
       if (k.wrong[q.id]) { k.wrong[q.id].n = Math.max(0, k.wrong[q.id].n - 1); if (!k.wrong[q.id].n) delete k.wrong[q.id]; }
       g.cards.classList.add('hidden'); g.qbox.classList.add('hidden'); g.layoutHud();
       g.cooldown = 1.3; g.updHud(); save();
     } else {
-      g.combo = 0; g.mist++; g.hearts--; g.shake = 0.4;
+      g.combo = 0; g.mist++; g.hearts--; g.shake = 0.4; g.grow(false);
       SFX.bad(); g.burst(px, py - 60, ['💥', '💢'], 8);
       var chosen = gt.labels[lane + 1];
       g.missed.push({ q: q.q, a: q.c[0], you: chosen });
@@ -690,6 +703,7 @@
       if (g.requeued[q.id] <= 2) g.queue.push(gt.item);
       g.updHud(); save();
       g.state = 'wrong'; g.cards.classList.add('hidden'); g.qbox.classList.add('hidden');
+      setTimeout(function () {   // รอให้เห็นตัวหดก่อน แล้วค่อยขึ้นเฉลย
       var m = g.modal('<div class="big">😵</div><h2>ยังไม่ถูกนะ</h2><div class="q">' + esc(q.q) + '</div>' +
         (q.clock ? '<svg viewBox="0 0 100 100" style="width:110px;height:110px">' + clockSvg(q.clock) + '</svg>' : '') +
         '<div class="ans">✅ ' + esc(q.c[0]) + '</div><div class="ex">' + esc(q.ex || '') + '</div>' +
@@ -700,7 +714,17 @@
         });
       speak((q.lang === 'en' ? 'The answer is ' : 'คำตอบที่ถูกคือ ') + (stripEmoji(q.c[0]) || ''), q.lang);
       setTimeout(function () { var b = m.querySelector('[data-m]'); if (b) b.disabled = false; }, g.beg ? 2200 : 1500);
+      }, 900);
     }
+  };
+  // แปลงร่าง: ถูก = ตัวใหญ่ขึ้น · ผิด = ตัวเล็กลง
+  Game.prototype.grow = function (up) {
+    var g = this, p = g.player, before = p.ts;
+    p.ts = up ? Math.min(1.6, p.ts + 0.1) : Math.max(0.6, p.ts - 0.1);
+    g.morph = 0.7; g.morphUp = up;
+    var x = g.W / 2 + p.x * g.laneW, y = g.groundY - g.laneW * 0.5 * p.ts;
+    if (up) { g.burst(x, y, ['✨', '⭐', '💪'], 12); if (p.ts > before) g.floatTxt(x, y - g.laneW * 0.6, 'แปลงร่าง! ⬆', '#7c3aed'); tone(400, 0.35, 'sine', 0.12, 0, 900); }
+    else { g.burst(x, y, ['💨', '💫'], 8); if (p.ts < before) g.floatTxt(x, y - g.laneW * 0.4, 'ตัวเล็กลง ⬇', '#dc2626'); tone(700, 0.35, 'sine', 0.1, 0, 250); }
   };
 
   // ---------- ด่านยิงฟอง ----------
@@ -723,8 +747,9 @@
     if (best.yes) {
       best.dead = true; g.blast.hit++; g.coins += 5; SFX.pop(); g.burst(best.x, best.y, ['✨', '⭐', '💎'], 10);
       g.floatTxt(best.x, best.y, '+5', '#16a34a');
+      g.player.ts = Math.min(1.6, g.player.ts + 0.03); g.morph = 0.3; g.morphUp = true;
     } else {
-      best.dead = true; best.bad = true; g.blast.bad++; g.mist++; g.hearts--; g.shake = 0.3; SFX.bad();
+      best.dead = true; best.bad = true; g.blast.bad++; g.mist++; g.hearts--; g.shake = 0.3; SFX.bad(); g.grow(false);
       g.burst(best.x, best.y, ['💢'], 6); g.floatTxt(best.x, best.y, '✖ ไม่ใช่!', '#dc2626');
       g.missed.push({ q: g.blast.s.rule, a: 'ไม่ต้องแตะ “' + best.t + '”', you: 'แตะ' });
       if (g.hearts <= 0) { g.updHud(); g.lose(); return; }
@@ -757,7 +782,8 @@
   Game.prototype.results = function (won) {
     var g = this, k = K(g.kid), key = g.subj.key + ':' + g.li;
     var stars = !won ? 0 : g.mist === 0 ? 3 : g.mist <= 2 ? 2 : 1;
-    var prev = k.stars[key] || 0, bonus = won ? stars * 10 + (stars > prev ? 20 : 0) : 0;
+    var sizeB = won ? Math.max(0, Math.round((g.player.scale - 1) * 150)) : 0;
+    var prev = k.stars[key] || 0, bonus = won ? stars * 10 + (stars > prev ? 20 : 0) + sizeB : 0;
     if (stars > prev) k.stars[key] = stars;
     k.coins += g.coins + bonus;
     g.recordTime(); save();
@@ -774,8 +800,8 @@
       if (levelUnlocked(g.subj, ni)) nextBtn = '<button class="btn green" data-m="next" data-n="' + ni + '">ด่านต่อไป ▶</button>';
     }
     var html = won
-      ? '<div class="big">🏆</div><h2>ชนะ ' + esc(g.th.bossName) + '!</h2><div class="stars">' + [0, 1, 2].map(function (i) { return '<span style="animation-delay:' + (0.2 + i * 0.25) + 's">' + (i < stars ? '⭐' : '☆') + '</span>'; }).join('') + '</div>' +
-        '<p class="q">ตอบถูก ' + g.okN + ' ข้อ · 💎 +' + (g.coins + bonus) + '</p>' + (stars < 3 ? '<p class="ex">ตอบถูกหมดไม่พลาดเลย = ⭐⭐⭐</p>' : '<p class="ex">เพอร์เฟกต์! ไม่พลาดสักข้อ 🎉</p>')
+      ? '<div class="big">' + heroImg(k.hero, Math.round(80 + 50 * Math.min(g.player.scale, 1.6))) + '</div><h2>🏆 ชนะ ' + esc(g.th.bossName) + '!</h2><div class="stars">' + [0, 1, 2].map(function (i) { return '<span style="animation-delay:' + (0.2 + i * 0.25) + 's">' + (i < stars ? '⭐' : '☆') + '</span>'; }).join('') + '</div>' +
+        '<p class="q">ตอบถูก ' + g.okN + ' ข้อ · 💎 +' + (g.coins + bonus) + '</p><p class="ex">💪 ตัวใหญ่ x' + g.player.scale.toFixed(1) + (sizeB ? ' → โบนัส 💎 +' + sizeB : '') + '</p>' + (stars < 3 ? '<p class="ex">ตอบถูกหมดไม่พลาดเลย = ⭐⭐⭐</p>' : '<p class="ex">เพอร์เฟกต์! ไม่พลาดสักข้อ 🎉</p>')
       : '<div class="big">💔</div><h2>หัวใจหมดแล้ว</h2><p class="q">ไม่เป็นไร! อ่านข้อที่พลาดแล้วลองใหม่นะ<br>💎 เก็บได้ ' + g.coins + ' เพชร</p>';
     var m = g.modal(html + miss + '<div class="row"><button class="btn gray" data-m="map">🗺️ แผนที่</button><button class="btn" data-m="again">🔁 เล่นอีก</button>' + nextBtn + '</div>', function (a) {
       var kid = g.kid, subj = g.subj, li = g.li;
@@ -797,7 +823,7 @@
 
   // ---------- เฟรม ----------
   Game.prototype.loop = function (now) {
-    var g = this, dt = Math.min(0.05, (now - g.last) / 1000); g.last = now;
+    var g = this, dt = clamp((now - g.last) / 1000, 0, 0.05); g.last = now;   // กัน dt ติดลบ (timestamp ของ rAF อาจอยู่ก่อน performance.now())
     g.update(dt); g.draw();
     g.raf = requestAnimationFrame(g.loop);
   };
@@ -820,6 +846,8 @@
     g.bossFlash = Math.max(0, g.bossFlash - dt); g.bossShake = Math.max(0, g.bossShake - dt); g.shake = Math.max(0, g.shake - dt);
     if (g.state === 'bossdie') { g.dieT += dt; if (Math.random() < 0.5) g.burst(g.W / 2 + rnd(-60, 60), g.horizon - g.bossSize() * 0.5 + rnd(-40, 40), ['💥', '⭐', '🎉', '✨'], 3); }
 
+    p.scale += (p.ts - p.scale) * Math.min(1, dt * 6); g.morph = Math.max(0, g.morph - dt);
+    if (g.state === 'ask') { p.x += clamp(p.lane - p.x, -dt * 9, dt * 9); return; }
     var moving = g.state === 'run' || g.state === 'blast' || g.state === 'intro' || g.state === 'bossdie';
     var v = g.state === 'run' ? g.speed : g.state === 'blast' ? 2.5 : g.state === 'intro' ? 2 : g.state === 'bossdie' ? 3 : 0;
     if (!moving) return;
@@ -843,7 +871,7 @@
         g.nextCoin = g.dist + rnd(14, 26);
       }
       var gateNear = g.gate && Math.abs(g.gate.z - FAR) < 9;
-      if (g.dist >= g.nextRock && !gateNear && !(g.beg && g.gate)) {
+      if (g.dist >= g.nextRock && !gateNear && !g.gate) {
         g.objs.push({ k: 'rock', lane: rnd(-1, 1), z: FAR });
         g.nextRock = g.dist + (g.beg ? rnd(55, 80) : rnd(26, 42));
       }
@@ -865,7 +893,11 @@
     g.objs = g.objs.filter(function (o) { return !o.gone && o.z > -2.5; });
 
     if (g.state === 'run') {
-      if (g.gate && g.gate.z <= 0) g.passGate();
+      if (g.gate && !g.gate.chosen && g.gate.z <= STOP_Z) {
+        g.gate.z = STOP_Z; g.state = 'ask';
+        g.askEl.classList.remove('hidden'); g.cards.classList.add('asking');
+      }
+      else if (g.gate && g.gate.z <= 0) g.passGate();
       else if (!g.gate) { g.cooldown -= dt; if (g.cooldown <= 0 && !g.shots.length) g.nextItem(); }
     }
     if (g.state === 'blast') g.updBlast(dt);
@@ -878,8 +910,8 @@
     if (b.spawnT <= 0 && b.items.length) {
       var it = b.items.shift();
       var x = rnd(Math.round(r * 1.2), Math.round(g.W - r * 1.2));
-      g.bubbles.push({ x: x, y: g.H + r, r: r, t: it.t, yes: it.yes, vy: (g.beg ? g.H / 9 : g.H / 6.5) * (0.85 + Math.random() * 0.3), ph: Math.random() * 6 });
-      b.spawnT = g.beg ? 1.7 : 1.15;
+      g.bubbles.push({ x: x, y: g.H + r, r: r, t: it.t, yes: it.yes, vy: (g.beg ? g.H / 13 : g.H / 9.5) * (0.85 + Math.random() * 0.3), ph: Math.random() * 6 });
+      b.spawnT = g.beg ? 2.2 : 1.6;
     }
     var top = g.hudBottom + 10;
     g.bubbles.forEach(function (o) {
@@ -967,12 +999,10 @@
     if (g.state === 'done' || g.state === 'lose' && false) return;
     if (g.state === 'bossdie') { var k = Math.max(0, 1 - g.dieT / 1.5); if (!k) return; c.globalAlpha = k; sz *= 1 + g.dieT * 0.6; }
     if (g.bossShake > 0) x += (Math.random() - 0.5) * 24;
-    c.font = sz + 'px ' + FONT; c.textAlign = 'center'; c.textBaseline = 'middle';
     c.fillStyle = 'rgba(0,0,0,.18)'; c.beginPath(); c.ellipse(x, g.horizon + 2, sz * 0.4, sz * 0.08, 0, 0, 7); c.fill();
-    c.fillStyle = '#000';
     if (g.bossFlash > 0) { c.shadowColor = '#fff'; c.shadowBlur = 40; }
-    c.fillText(g.th.boss, x, y);
-    c.shadowBlur = 0; c.globalAlpha = 1;
+    SK.draw(c, SK.BOSSES[g.subj.key] || SK.BOSSES.thai, x, g.horizon + Math.sin(g.t * 2) * 4, sz * 1.05, { run: g.state === 'bossdie' ? null : g.t * 2.5 });
+    c.shadowBlur = 0; c.globalAlpha = 1; c.textAlign = 'center'; c.textBaseline = 'middle';
   };
 
   Game.prototype.drawObj = function (o) {
@@ -1039,16 +1069,24 @@
   }
 
   Game.prototype.drawPlayer = function () {
-    var g = this, c = g.cx, p = g.player, s = g.laneW * 0.62;
-    var x = g.W / 2 + p.x * g.laneW, jumpPx = p.jump * s * 0.55;
-    var bob = g.state === 'run' || g.state === 'intro' ? Math.abs(Math.sin(p.run)) * s * 0.08 : 0;
-    var y = g.groundY - s * 0.45 - jumpPx - bob;
-    c.fillStyle = 'rgba(0,0,0,.22)'; c.beginPath(); c.ellipse(x, g.groundY + 4, s * 0.34 * (1 - p.jump * 0.1), s * 0.09, 0, 0, 7); c.fill();
-    c.save(); c.translate(x, y); c.rotate((p.lane - p.x) * -0.35);
+    var g = this, c = g.cx, p = g.player, h = g.laneW * 0.78 * p.scale;
+    var x = g.W / 2 + p.x * g.laneW, jumpPx = p.jump * g.laneW * 0.35;
+    var runningNow = g.state === 'run' || g.state === 'intro' || g.state === 'blast';
+    var bob = runningNow ? Math.abs(Math.sin(p.run)) * h * 0.04 : 0;
+    var foot = g.groundY + h * 0.02 - jumpPx - bob;
+    c.fillStyle = 'rgba(0,0,0,.22)'; c.beginPath(); c.ellipse(x, g.groundY + 4, h * 0.32, h * 0.07, 0, 0, 7); c.fill();
+    if (g.morph > 0) {   // วงแสงตอนแปลงร่าง
+      var k = g.morph / 0.7;
+      c.strokeStyle = g.morphUp ? 'rgba(250,204,21,' + k + ')' : 'rgba(239,68,68,' + k + ')';
+      c.lineWidth = 10 * k; c.beginPath(); c.arc(x, foot - h * 0.5, h * (0.75 + (1 - k) * 0.6), 0, 7); c.stroke();
+    }
+    c.save(); c.translate(x, foot); c.rotate((p.lane - p.x) * -0.25); c.translate(-x, -foot);
     if (p.stun > 0 && Math.floor(g.t * 12) % 2) c.globalAlpha = 0.4;
-    c.fillStyle = '#000'; c.font = s + 'px ' + FONT; c.fillText(K(g.kid).hero, 0, 0);
+    if (g.state === 'ask' || (g.gate && g.gate.z < 9)) c.globalAlpha = 0.55;   // โปร่งให้เห็นประตู
+    SK.draw(c, K(g.kid).hero, x, foot, h, { back: true, run: runningNow ? p.run : null });
     c.restore(); c.globalAlpha = 1;
-    if (g.combo >= 3 && g.state === 'run') { c.font = 'bold 22px ' + FONT; c.fillStyle = '#f97316'; c.fillText('🔥 x' + g.combo, x, y - s * 0.62); }
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    if (g.combo >= 3 && g.state === 'run') { c.font = 'bold 22px ' + FONT; c.fillStyle = '#f97316'; c.fillText('🔥 x' + g.combo, x, foot - h - 16); }
   };
 
   Game.prototype.drawBubble = function (o) {
