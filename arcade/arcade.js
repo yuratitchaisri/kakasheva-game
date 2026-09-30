@@ -553,13 +553,15 @@
       '<div class="bosshp"><span>' + g.th.boss + '</span><div class="b"><i></i></div></div><span class="coins">💎 0</span></div>' +
       '<div class="qbox hidden"><button class="say" data-g="say">🔊</button><div class="qt"></div><svg class="clock" viewBox="0 0 100 100" style="display:none"></svg></div>' +
       '<div class="cards3 hidden"><button class="c0" data-g="lane" data-l="-1"></button><button class="c1" data-g="lane" data-l="0"></button><button class="c2" data-g="lane" data-l="1"></button></div>' +
-      '<div class="askhint hidden">👆 แตะเลือกคำตอบ</div><button class="jumpbtn" data-g="jump">⤴️</button>';
+      '<div class="askhint hidden">👆 แตะเลือกคำตอบ</div><button class="jumpbtn" data-g="jump">⤴️</button>' +
+      '<button class="scratchbtn hidden" data-g="scratch">✏️ กระดาษทด</button>';
     document.body.appendChild(el);
     g.el = el; g.cv = el.querySelector('canvas'); g.cx = g.cv.getContext('2d');
     g.qbox = el.querySelector('.qbox'); g.qt = el.querySelector('.qt'); g.clockEl = el.querySelector('.clock');
     g.cards = el.querySelector('.cards3'); g.cardBtns = g.cards.querySelectorAll('button');
     g.heartsEl = el.querySelector('.hearts'); g.hpEl = el.querySelector('.bosshp i'); g.coinEl = el.querySelector('.coins');
-    g.jumpBtn = el.querySelector('.jumpbtn'); g.askEl = el.querySelector('.askhint');
+    g.jumpBtn = el.querySelector('.jumpbtn'); g.askEl = el.querySelector('.askhint'); g.scratchBtn = el.querySelector('.scratchbtn');
+    g.strokes = []; g.penSeen = false;
     g.updHud();
     g.resize = g.resize.bind(g); window.addEventListener('resize', g.resize); g.resize();
 
@@ -569,6 +571,7 @@
       if (a === 'pause') g.pause();
       else if (a === 'say') g.sayQ(true);
       else if (a === 'jump') g.doJump();
+      else if (a === 'scratch') g.openScratch();
       else if (a === 'lane') g.choose(+b.getAttribute('data-l'));
     });
     // สัมผัส: ปัดซ้าย/ขวา = เปลี่ยนเลน · ปัดขึ้น = กระโดด · แตะ = ไปเลนนั้น / ยิงฟอง
@@ -593,7 +596,7 @@
       else if (e.key === 'Escape') g.pause();
     };
     window.addEventListener('keydown', g.onKey);
-    g.onVis = function () { if (document.hidden && (g.state === 'run' || g.state === 'blast' || g.state === 'ask')) g.pause(); };
+    g.onVis = function () { if (document.hidden && (g.state === 'run' || g.state === 'blast' || g.state === 'ask')) g.pause(); };   // ตอนเปิดกระดาษทด (state scratch) เกมหยุดอยู่แล้ว
     document.addEventListener('visibilitychange', g.onVis);
     g.last = performance.now();
     g.loop = g.loop.bind(g); g.raf = requestAnimationFrame(g.loop);
@@ -723,6 +726,7 @@
     g.cards.classList.remove('hidden');
     g.jumpBtn.style.display = '';
     g.layoutHud(); g.markCard();
+    g.strokes = []; g.scratchBtn.classList.toggle('hidden', !g.isCalc());
     g.sayQ(false);
   };
   Game.prototype.sayQ = function (force) {
@@ -760,7 +764,7 @@
   // ---------- ผ่านประตู ----------
   Game.prototype.passGate = function () {
     var g = this, gt = g.gate, lane = Math.round(g.player.x), q = gt.q;
-    g.gate = null; g.markCard();
+    g.gate = null; g.markCard(); g.scratchBtn.classList.add('hidden');
     var sk = q.skey || g.subj.key, k = K(g.kid), dr = dayRec(k), sr = k.subj[sk] = k.subj[sk] || { q: 0, ok: 0 };
     dr.q++; sr.q++;
     var px = g.W / 2 + g.player.x * g.laneW, py = g.groundY;
@@ -801,6 +805,83 @@
       }, 900);
     }
   };
+  // ---------- กระดาษทด (เฉพาะข้อคำนวณ) — รองรับ Apple Pencil + กันฝ่ามือ ----------
+  Game.prototype.isCalc = function () {
+    var q = this.gate && this.gate.q; if (!q) return false;
+    var k = q.skey || this.subj.key;
+    return k === 'math' || k === 'mathinter';
+  };
+  Game.prototype.openScratch = function () {
+    var g = this; if (!g.gate || (g.state !== 'run' && g.state !== 'ask')) return;
+    g.scPrev = g.state; g.state = 'scratch'; hush(); SFX.click();
+    var el = document.createElement('div'); el.className = 'scratch';
+    var pens = [['#111827', 'ดำ'], ['#2563eb', 'น้ำเงิน'], ['#dc2626', 'แดง']];
+    el.innerHTML = '<div class="sbar"><div class="sq"></div>' +
+      '<div class="stools">' + pens.map(function (x, i) { return '<button class="pen' + (i === 0 ? ' on' : '') + '" data-s="pen" data-c="' + x[0] + '" style="background:' + x[0] + '" title="' + x[1] + '"></button>'; }).join('') +
+      '<button data-s="undo">↩️ ย้อน</button><button data-s="clear">🧽 ล้าง</button><button class="close" data-s="close">✖ ปิด</button></div></div>' +
+      '<canvas></canvas><div class="schoices"><span>ทดเสร็จแล้ว ตอบเลย 👉</span>' +
+      g.gate.labels.map(function (l, i) { return '<button class="c' + i + '" data-s="pick" data-l="' + (i - 1) + '">' + esc(l) + '</button>'; }).join('') + '</div>';
+    g.el.appendChild(el); g.scEl = el;
+    el.querySelector('.sq').textContent = g.gate.q.q;
+    if (g.gate.q.clock) el.querySelector('.sq').insertAdjacentHTML('beforeend', ' <svg viewBox="0 0 100 100" style="width:64px;height:64px;vertical-align:middle">' + clockSvg(g.gate.q.clock) + '</svg>');
+    var cv = el.querySelector('canvas'), c = cv.getContext('2d'), color = pens[0][0], cur = null;
+    g.scCv = cv; g.scCtx = c;
+    function size() {
+      var r = cv.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 2);
+      cv.width = r.width * dpr; cv.height = r.height * dpr; c.setTransform(dpr, 0, 0, dpr, 0, 0); g.scRedraw();
+    }
+    g.scSize = size; window.addEventListener('resize', size); setTimeout(size, 0);
+    function pt(e) { var r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top, e.pressure || 0.5]; }
+    cv.addEventListener('pointerdown', function (e) {
+      if (e.pointerType === 'pen') g.penSeen = true;
+      if (g.penSeen && e.pointerType === 'touch') return;   // มี Apple Pencil แล้ว = ไม่วาดด้วยนิ้ว/ฝ่ามือ
+      e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (x) {}
+      cur = { c: color, pen: e.pointerType === 'pen', pts: [pt(e)], id: e.pointerId }; g.strokes.push(cur); g.scRedraw();
+    });
+    cv.addEventListener('pointermove', function (e) {
+      if (!cur || e.pointerId !== cur.id) return;
+      var evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e]; if (!evs.length) evs = [e];
+      evs.forEach(function (ev) { cur.pts.push(pt(ev)); });
+      g.scStroke(cur, cur.pts.length - evs.length - 1);
+    });
+    function end(e) { if (cur && e.pointerId === cur.id) cur = null; }
+    cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+    el.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-s]'); if (!b) return;
+      var a = b.getAttribute('data-s');
+      if (a === 'pen') { color = b.getAttribute('data-c'); el.querySelectorAll('.pen').forEach(function (x) { x.classList.toggle('on', x === b); }); }
+      else if (a === 'undo') { g.strokes.pop(); g.scRedraw(); }
+      else if (a === 'clear') { g.strokes = []; g.scRedraw(); }
+      else if (a === 'close') g.closeScratch();
+      else if (a === 'pick') { var l = +b.getAttribute('data-l'); g.closeScratch(); g.choose(l); }
+    });
+  };
+  Game.prototype.scRedraw = function () {
+    var g = this, cv = g.scCv, c = g.scCtx; if (!cv) return;
+    var r = cv.getBoundingClientRect(), W = r.width, H = r.height;
+    c.clearRect(0, 0, W, H); c.fillStyle = '#fff'; c.fillRect(0, 0, W, H);
+    c.strokeStyle = '#dbeafe'; c.lineWidth = 1;   // ตารางแบบสมุดกราฟ ช่วยตั้งหลักเลขให้ตรง
+    for (var x = 44; x < W; x += 44) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, H); c.stroke(); }
+    for (var y = 44; y < H; y += 44) { c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke(); }
+    g.strokes.forEach(function (st) { g.scStroke(st, 0); });
+  };
+  Game.prototype.scStroke = function (st, from) {
+    var c = this.scCtx, pts = st.pts; if (!c) return;
+    c.strokeStyle = st.c; c.fillStyle = st.c; c.lineCap = 'round'; c.lineJoin = 'round';
+    if (pts.length === 1) { c.beginPath(); c.arc(pts[0][0], pts[0][1], 2.5, 0, 7); c.fill(); return; }
+    for (var i = Math.max(1, from); i < pts.length; i++) {
+      var a = pts[i - 1], b = pts[i];
+      c.lineWidth = st.pen ? 1.5 + b[2] * 4.5 : 4;
+      c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke();
+    }
+  };
+  Game.prototype.closeScratch = function () {
+    var g = this; if (!g.scEl) return;
+    window.removeEventListener('resize', g.scSize);
+    g.scEl.remove(); g.scEl = null; g.scCv = null; g.scCtx = null;
+    g.state = g.scPrev || 'ask'; g.last = performance.now();
+  };
+
   // แปลงร่าง: ถูก = ตัวใหญ่ขึ้น · ผิด = ตัวเล็กลง
   Game.prototype.grow = function (up) {
     var g = this, p = g.player, before = p.ts;
@@ -820,7 +901,7 @@
     g.bubbles = [];
     g.state = 'blast';
     g.qt.textContent = '🎯 ' + s.rule; g.qbox.classList.remove('hidden'); g.qbox.classList.add('rule');
-    g.clockEl.style.display = 'none'; g.cards.classList.add('hidden'); g.jumpBtn.style.display = 'none'; g.layoutHud();
+    g.clockEl.style.display = 'none'; g.cards.classList.add('hidden'); g.jumpBtn.style.display = 'none'; g.scratchBtn.classList.add('hidden'); g.layoutHud();
     g.toast('🎯 ด่านยิงฟอง!', 1200, '#0ea5e9');
     speak(s.rule, g.blast.lang);
   };

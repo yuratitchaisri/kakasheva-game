@@ -179,3 +179,22 @@ img.av { vertical-align: middle; image-rendering: auto; }
 .tn.now { background: #fde047; transform: scale(1.12); outline: 4px solid #fff; }
 .tn.boss { background: #1e1b4b; color: #fff; } .tn.boss .ts { color: #fde68a; }
 .advfoot { text-align: center; }
+
+/* ---------- กระดาษทด ---------- */
+.scratchbtn { position: absolute; left: 16px; bottom: 18px; z-index: 3; padding: 14px 20px; border-radius: 24px; font-size: 22px; font-weight: 900;
+  background: #fde047; color: #422006; box-shadow: 0 6px 0 #ca8a04, 0 10px 18px rgba(0,0,0,.2); }
+.scratchbtn:active { transform: translateY(4px); box-shadow: 0 2px 0 #ca8a04; }
+.scratchbtn.hidden { display: none; }
+.scratch { position: absolute; inset: 0; z-index: 12; background: #fff; display: flex; flex-direction: column; touch-action: none; }
+.scratch .sbar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: #fef9c3; border-bottom: 3px solid #fde047; flex-wrap: wrap; }
+.scratch .sq { flex: 1; min-width: 200px; font-size: clamp(20px, 2.8vw, 28px); font-weight: 900; color: #2b2350; }
+.scratch .stools { display: flex; gap: 8px; align-items: center; }
+.scratch .stools button { height: 48px; padding: 0 14px; border-radius: 14px; font-size: 18px; font-weight: 800; background: #fff; box-shadow: 0 4px 0 rgba(0,0,0,.15); }
+.scratch .stools button.pen { width: 44px; padding: 0; border: 4px solid #fff; }
+.scratch .stools button.pen.on { outline: 4px solid #7c3aed; }
+.scratch .stools button.close { background: #ef4444; color: #fff; }
+#play .scratch canvas { position: relative; inset: auto; flex: 1 1 0; min-height: 0; height: 0; width: 100%; display: block; touch-action: none; }
+.scratch .schoices { display: flex; gap: 10px; align-items: center; justify-content: center; padding: 10px; background: #f5f3ff; flex-wrap: wrap; }
+.scratch .schoices span { font-weight: 800; color: #5b21b6; font-size: 18px; }
+.scratch .schoices button { min-width: 120px; padding: 10px 16px; border-radius: 18px; font-size: 22px; font-weight: 900; color: #fff; box-shadow: 0 5px 0 rgba(0,0,0,.25); }
+.scratch .schoices .c0 { background: #ec4899; } .scratch .schoices .c1 { background: #f59e0b; } .scratch .schoices .c2 { background: #0ea5e9; }
