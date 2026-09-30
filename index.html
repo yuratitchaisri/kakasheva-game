@@ -77,8 +77,16 @@
       var kids = state.kids || {};
       var NAMES = { Sheva: "เชว่า", Kaka: "กาก้า" };
 
+      // ตรรกะเดียวกับ classroom/index.html (ตอนย่อย key = "<ครั้ง>.<ตอน>")
+      function doneMap(c) { return (kids[c.id] || {}).done || {}; }
+      function partDone(c, ep, p) {
+        var done = doneMap(c), d = done[ep.no + "." + p.no];
+        if (d !== undefined) return d;
+        return done[ep.no] !== undefined ? done[ep.no] : !!ep.learned;
+      }
       function isDone(c, ep) {
-        var d = ((kids[c.id] || {}).done || {})[ep.no];
+        if (ep.parts && ep.parts.length) return ep.parts.every(function (p) { return partDone(c, ep, p); });
+        var d = doneMap(c)[ep.no];
         return d === undefined ? !!ep.learned : d;
       }
       function esc(s) {
@@ -91,7 +99,10 @@
           c.episodes.slice().sort(function (a, b) { return a.no - b.no; }).forEach(function (e) {
             total++;
             if (isDone(c, e)) done++;
-            else if (!next) next = c.id.replace(/ ป\.\d$/, "") + " ครั้งที่ " + e.no;
+            else if (!next) {
+              var np = (e.parts || []).filter(function (p) { return !partDone(c, e, p); })[0];
+              next = c.id.replace(/ ป\.\d$/, "") + " ครั้งที่ " + e.no + (np ? " ตอน " + np.no : "");
+            }
           });
         });
         return '<div class="kid"><div class="name">' + NAMES[child] + '</div>' +

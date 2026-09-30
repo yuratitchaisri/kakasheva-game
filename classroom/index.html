@@ -43,6 +43,13 @@
     .mark { background: #EEF2F1; color: #1F2A28; }
     .mark.on { background: #D5F0E3; color: #1B6B45; }
     .wait { background: #EEF2F1; color: #8A9794; }
+    .parts { margin-top: 10px; padding-left: 44px; }
+    .part { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; margin-bottom: 6px; background: #F7FAF9; }
+    .part.nextpart { background: #FFF6E0; }
+    .part.pdone { opacity: .7; }
+    .part .pl { flex: 1 1 140px; font-weight: bold; }
+    .part a, .part button, .part span.wait { padding: 8px 14px; font-size: 17px; border-radius: 10px; border: 0; font-family: inherit; text-decoration: none; cursor: pointer; }
+    .full { background: none !important; color: #5B6B67 !important; text-decoration: underline !important; font-size: 15px !important; }
     footer { text-align: center; padding: 20px; }
     footer button { background: none; border: 0; color: #8A9794; font-family: inherit; font-size: 14px; text-decoration: underline; cursor: pointer; }
   </style>
@@ -69,9 +76,21 @@
       state.kids = state.kids || {};
       return state.kids[child] = state.kids[child] || { done: {}, opened: {} };
     }
+    // ครั้งที่มีตอนย่อย (parts) ติ๊กทีละตอน key = "<ครั้ง>.<ตอน>" · ครั้งนั้นจบเมื่อครบทุกตอน
+    function hasParts(ep) { return ep.parts && ep.parts.length; }
+    function partDone(c, ep, p) {
+      var done = kid(c.id).done, d = done[ep.no + "." + p.no];
+      if (d !== undefined) return d;
+      return done[ep.no] !== undefined ? done[ep.no] : !!ep.learned;
+    }
     function isDone(c, ep) {
+      if (hasParts(ep)) return ep.parts.every(function (p) { return partDone(c, ep, p); });
       var d = kid(c.id).done[ep.no];
       return d === undefined ? !!ep.learned : d;
+    }
+    function keyLabel(key) {
+      var k = String(key).split(".");
+      return "ครั้งที่ " + k[0] + (k[1] ? " ตอน " + k[1] : "");
     }
     function thaiTime(ts) {
       return new Date(ts).toLocaleString("th-TH", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -92,13 +111,12 @@
       var eps = c.episodes.slice().sort(function (a, b) { return a.no - b.no; });
       var doneCount = eps.filter(function (e) { return isDone(c, e); }).length;
       var next = eps.filter(function (e) { return !isDone(c, e); })[0];
-      var last = eps.filter(function (e) { return k.opened[e.no]; })
-                    .sort(function (a, b) { return k.opened[b.no] - k.opened[a.no]; })[0];
+      var last = Object.keys(k.opened).sort(function (a, b) { return k.opened[b] - k.opened[a]; })[0];
 
       var html = '<div class="summary"><div class="course">' + esc(c.course) + "</div>" +
         '<div class="bar"><div style="width:' + Math.round(doneCount / eps.length * 100) + '%"></div></div>' +
         '<div class="muted">ดูจบแล้ว ' + doneCount + " จาก " + eps.length + " ครั้ง" +
-        (last ? " · เปิดล่าสุด: ครั้งที่ " + last.no + " (" + thaiTime(k.opened[last.no]) + ")" : "") + "</div></div>";
+        (last ? " · เปิดล่าสุด: " + keyLabel(last) + " (" + thaiTime(k.opened[last]) + ")" : "") + "</div></div>";
 
       var groups = c.docGroups || (c.docs && c.docs.length ? [{ title: "เอกสารเรียน (ใช้ทั้งคอร์ส)", docs: c.docs }] : []);
       groups.forEach(function (g) {
@@ -117,20 +135,35 @@
       html += eps.map(function (e) {
         var done = isDone(c, e), isNext = e === next;
         var icon = done ? "✅" : isNext ? "👉" : k.opened[e.no] ? "👀" : "⬜";
-        var acts = e.link
-          ? '<a class="play" href="' + esc(e.link) + '" target="_blank" rel="noopener" data-open="' + e.no + '">▶ ดูคลิป</a>'
-          : '<span class="wait">⏳ รอลิงก์</span>';
+        var acts = "", partsHtml = "";
+        if (hasParts(e)) {
+          var nextPart = isNext ? e.parts.filter(function (p) { return !partDone(c, e, p); })[0] : null;
+          partsHtml = '<div class="parts">' + e.parts.map(function (p) {
+            var key = e.no + "." + p.no, pd = partDone(c, e, p);
+            return '<div class="part' + (p === nextPart ? " nextpart" : "") + (pd ? " pdone" : "") + '">' +
+              '<span class="pl">' + (pd ? "✅" : p === nextPart ? "👉" : k.opened[key] ? "👀" : "⬜") +
+              " ตอน " + p.no + "/" + e.parts.length + (p.min ? ' <span class="muted">· ' + p.min + " นาที</span>" : "") + "</span>" +
+              (p.link ? '<a class="play" href="' + esc(p.link) + '" target="_blank" rel="noopener" data-open="' + key + '">▶ ดู</a>'
+                      : '<span class="wait">⏳ รอลิงก์</span>') +
+              '<button class="mark' + (pd ? " on" : "") + '" data-mark="' + key + '">' + (pd ? "✔ จบแล้ว" : "กดเมื่อดูจบ") + "</button></div>";
+          }).join("") + "</div>";
+          if (e.link) acts += '<a class="full" href="' + esc(e.link) + '" target="_blank" rel="noopener" data-open="' + e.no + '">คลิปเต็ม</a>';
+        } else {
+          acts = e.link
+            ? '<a class="play" href="' + esc(e.link) + '" target="_blank" rel="noopener" data-open="' + e.no + '">▶ ดูคลิป</a>'
+            : '<span class="wait">⏳ รอลิงก์</span>';
+        }
         (e.docs || []).forEach(function (d) {
           acts += d.link
             ? '<a class="doc" href="' + esc(d.link) + '" target="_blank" rel="noopener">📄 ' + esc(d.name) + "</a>"
             : '<span class="doc wait">📄 ' + esc(d.name) + " (รอลิงก์)</span>";
         });
-        acts += '<button class="mark' + (done ? " on" : "") + '" data-mark="' + e.no + '">' + (done ? "✔ ดูจบแล้ว" : "กดเมื่อดูจบ") + "</button>";
+        if (!hasParts(e)) acts += '<button class="mark' + (done ? " on" : "") + '" data-mark="' + e.no + '">' + (done ? "✔ ดูจบแล้ว" : "กดเมื่อดูจบ") + "</button>";
         return '<div class="ep' + (done ? " done" : "") + (isNext ? " next" : "") + '">' +
           '<div class="top"><span class="icon">' + icon + "</span><div>" +
           '<div class="title">ครั้งที่ ' + e.no + (isNext ? '<span class="tag">ดูถึงตรงนี้</span>' : "") + "</div>" +
           '<div class="muted">เรียนวันที่ ' + esc(e.date) + (e.learned ? " · เรียนสดแล้ว" : "") + "</div></div></div>" +
-          '<div class="actions">' + acts + "</div></div>";
+          partsHtml + (acts ? '<div class="actions">' + acts + "</div>" : "") + "</div>";
       }).join("");
 
       document.getElementById("view").innerHTML = html;
@@ -144,8 +177,14 @@
       if (t.dataset.course) { state.current = t.dataset.course; }
       else if (t.dataset.open) { kid(c.id).opened[t.dataset.open] = Date.now(); }  // ลิงก์เปิดต่อเอง ไม่ preventDefault
       else if (t.dataset.mark) {
-        var ep = c.episodes.filter(function (e) { return String(e.no) === t.dataset.mark; })[0];
-        kid(c.id).done[ep.no] = !isDone(c, ep);
+        var km = t.dataset.mark.split(".");
+        var ep = c.episodes.filter(function (e) { return String(e.no) === km[0]; })[0];
+        if (km[1]) {
+          var part = ep.parts.filter(function (p) { return String(p.no) === km[1]; })[0];
+          kid(c.id).done[t.dataset.mark] = !partDone(c, ep, part);
+        } else {
+          kid(c.id).done[ep.no] = !isDone(c, ep);
+        }
       }
       render();
     });
