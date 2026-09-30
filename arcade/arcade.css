@@ -1,0 +1,149 @@
+/* ฮีโร่ตะลุยสอบ — สไตล์ของเกม (web/arcade/) */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; overflow: hidden; }
+body {
+  font-family: "Mali", "Thonburi", "Leelawadee UI", "Noto Sans Thai", system-ui, sans-serif;
+  background: linear-gradient(180deg, #6ec6ff 0%, #b388ff 100%);
+  color: #2b2350; user-select: none; -webkit-user-select: none; touch-action: manipulation;
+}
+button { font-family: inherit; cursor: pointer; border: 0; }
+#app { position: fixed; inset: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+/* ---------- ปุ่ม ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 14px 26px; border-radius: 22px; font-size: 22px; font-weight: 700; color: #fff;
+  background: linear-gradient(180deg, #ff8a3d, #ff5f6d); box-shadow: 0 6px 0 #c2410c, 0 10px 18px rgba(0,0,0,.2);
+  transition: transform .08s;
+}
+.btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #c2410c; }
+.btn.green { background: linear-gradient(180deg, #4ade80, #16a34a); box-shadow: 0 6px 0 #166534, 0 10px 18px rgba(0,0,0,.2); }
+.btn.blue { background: linear-gradient(180deg, #60a5fa, #2563eb); box-shadow: 0 6px 0 #1e3a8a, 0 10px 18px rgba(0,0,0,.2); }
+.btn.gray { background: linear-gradient(180deg, #cbd5e1, #94a3b8); box-shadow: 0 6px 0 #475569; color: #1e293b; }
+.btn.small { padding: 8px 16px; font-size: 17px; border-radius: 16px; }
+.btn[disabled] { opacity: .45; pointer-events: none; }
+
+/* ---------- แถบบน ---------- */
+.topbar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  background: rgba(255,255,255,.35); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.topbar .title { flex: 1; font-size: 22px; font-weight: 800; color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,.25);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pill { background: #fff; border-radius: 999px; padding: 6px 14px; font-size: 19px; font-weight: 800; box-shadow: 0 3px 0 rgba(0,0,0,.15); white-space: nowrap; }
+.iconbtn { width: 48px; height: 48px; border-radius: 16px; background: #fff; font-size: 24px; box-shadow: 0 4px 0 rgba(0,0,0,.18); }
+.iconbtn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,.18); }
+
+/* ---------- หน้าแรก ---------- */
+.home { min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; gap: 18px; text-align: center; }
+.logo { font-size: clamp(38px, 7vw, 66px); margin: 0; color: #fff; line-height: 1.1;
+  text-shadow: 0 4px 0 #7c3aed, 0 8px 16px rgba(0,0,0,.25); animation: bob 2.4s ease-in-out infinite; }
+.sub { margin: 0; font-size: 21px; color: #fff; font-weight: 700; text-shadow: 0 2px 0 rgba(0,0,0,.2); }
+.kids { display: flex; gap: 22px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
+.kidcard { width: 230px; padding: 20px 14px 18px; border-radius: 30px; background: #fff; box-shadow: 0 10px 0 #7c3aed, 0 16px 26px rgba(0,0,0,.25);
+  display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 18px; color: #2b2350; transition: transform .1s; }
+.kidcard:active { transform: translateY(6px); box-shadow: 0 4px 0 #7c3aed; }
+.kidcard .hero { font-size: 92px; line-height: 1.05; animation: bob 1.6s ease-in-out infinite; }
+.kidcard b { font-size: 30px; }
+.kidcard .meta { font-size: 17px; color: #6b5ca5; font-weight: 700; }
+.homefoot { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; justify-content: center; }
+.homefoot a { color: #fff; font-weight: 700; }
+
+@keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes pop { 0% { transform: scale(.3); opacity: 0; } 70% { transform: scale(1.12); opacity: 1; } 100% { transform: scale(1); } }
+@keyframes wiggle { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-8deg); } 75% { transform: rotate(8deg); } }
+
+/* ---------- แผนที่วิชา ---------- */
+.worlds { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 18px; padding: 18px; max-width: 1100px; margin: 0 auto; }
+.world { position: relative; border-radius: 28px; padding: 18px 12px 16px; color: #fff; text-align: center; min-height: 170px;
+  display: flex; flex-direction: column; align-items: center; gap: 4px; box-shadow: 0 8px 0 rgba(0,0,0,.25), 0 14px 22px rgba(0,0,0,.2); transition: transform .1s; }
+.world:active { transform: translateY(5px); }
+.world .em { font-size: 58px; line-height: 1.1; filter: drop-shadow(0 4px 0 rgba(0,0,0,.2)); }
+.world .nm { font-size: 22px; font-weight: 800; text-shadow: 0 2px 0 rgba(0,0,0,.25); }
+.world .st { font-size: 17px; font-weight: 700; background: rgba(0,0,0,.2); padding: 3px 12px; border-radius: 999px; }
+.world .bar { width: 80%; height: 10px; background: rgba(255,255,255,.35); border-radius: 99px; overflow: hidden; margin-top: 4px; }
+.world .bar i { display: block; height: 100%; background: #fde047; border-radius: 99px; }
+.world .boss { position: absolute; top: 8px; right: 12px; font-size: 30px; animation: wiggle 1.4s ease-in-out infinite; }
+
+/* ---------- เส้นทางด่าน ---------- */
+.path { max-width: 640px; margin: 0 auto; padding: 16px 16px 40px; display: flex; flex-direction: column; gap: 14px; }
+.node { display: flex; align-items: center; gap: 14px; background: #fff; border-radius: 26px; padding: 14px 16px; box-shadow: 0 7px 0 rgba(0,0,0,.2); text-align: left; color: #2b2350; }
+.node:nth-child(even) { margin-left: 40px; }
+.node:nth-child(odd) { margin-right: 40px; }
+.node .ic { width: 70px; height: 70px; border-radius: 22px; display: flex; align-items: center; justify-content: center; font-size: 40px; flex: none; color: #fff; }
+.node .tx { flex: 1; min-width: 0; }
+.node .tx b { display: block; font-size: 21px; }
+.node .tx small { font-size: 16px; color: #6b5ca5; font-weight: 700; }
+.node .stars { font-size: 22px; letter-spacing: 1px; white-space: nowrap; }
+.node.locked { opacity: .55; filter: grayscale(.8); }
+.node.bossnode { background: linear-gradient(90deg, #1e1b4b, #7c2d12); color: #fff; }
+.node.bossnode small { color: #fde68a; }
+.node .cards { font-size: 15px; padding: 6px 10px; border-radius: 12px; background: #ede9fe; color: #5b21b6; font-weight: 700; flex: none; }
+
+/* ---------- หน้าจอเล่น ---------- */
+#play { position: fixed; inset: 0; z-index: 20; background: #000; overflow: hidden; touch-action: none; }
+#play canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.hud { position: absolute; left: 0; right: 0; top: 0; display: flex; align-items: center; gap: 10px; padding: 8px 12px; z-index: 3; pointer-events: none; }
+.hud > * { pointer-events: auto; }
+.hud .hearts { font-size: 26px; letter-spacing: 2px; background: rgba(255,255,255,.85); border-radius: 999px; padding: 2px 12px; }
+.hud .bosshp { flex: 1; display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,.35); border-radius: 999px; padding: 4px 10px; color: #fff; font-weight: 800; font-size: 16px; min-width: 0; }
+.hud .bosshp .b { flex: 1; height: 14px; background: rgba(255,255,255,.25); border-radius: 99px; overflow: hidden; }
+.hud .bosshp .b i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #ef4444, #f97316); transition: width .35s; }
+.hud .coins { font-size: 20px; font-weight: 800; background: rgba(255,255,255,.9); border-radius: 999px; padding: 4px 12px; }
+.hud .iconbtn { width: 44px; height: 44px; font-size: 22px; }
+
+.qbox { position: absolute; left: 50%; transform: translateX(-50%); top: 62px; width: min(94vw, 900px); z-index: 3;
+  background: rgba(255,255,255,.95); border-radius: 22px; padding: 10px 14px 10px 16px; box-shadow: 0 6px 0 rgba(0,0,0,.2);
+  display: flex; align-items: center; gap: 10px; min-height: 64px; }
+.qbox .qt { flex: 1; font-size: clamp(19px, 2.6vw, 27px); font-weight: 800; line-height: 1.3; color: #2b2350; }
+.qbox .say { flex: none; width: 50px; height: 50px; border-radius: 16px; background: #fde047; font-size: 26px; box-shadow: 0 4px 0 #ca8a04; }
+.qbox .clock { flex: none; width: 92px; height: 92px; }
+.qbox.rule { background: linear-gradient(90deg, #fef9c3, #fde68a); }
+.qbox.hidden, .cards3.hidden { display: none; }
+.cards3 { position: absolute; left: 50%; transform: translateX(-50%); z-index: 3; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.cards3 button { border-radius: 18px; padding: 8px 6px; font-size: clamp(17px, 2.3vw, 24px); font-weight: 800; color: #fff; line-height: 1.2;
+  box-shadow: 0 5px 0 rgba(0,0,0,.28); min-height: 54px; text-shadow: 0 2px 0 rgba(0,0,0,.25); word-break: break-word; }
+.cards3 button.sel { outline: 5px solid #fff; transform: translateY(-3px) scale(1.04); }
+.cards3 .c0 { background: #ec4899; } .cards3 .c1 { background: #f59e0b; } .cards3 .c2 { background: #0ea5e9; }
+.jumpbtn { position: absolute; right: 16px; bottom: 18px; z-index: 3; width: 86px; height: 86px; border-radius: 50%; font-size: 40px;
+  background: rgba(255,255,255,.9); box-shadow: 0 6px 0 rgba(0,0,0,.25); }
+.jumpbtn:active { transform: translateY(4px); }
+.toast { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); z-index: 6; font-size: clamp(30px, 6vw, 56px); font-weight: 900; color: #fff;
+  text-shadow: 0 4px 0 #7c3aed, 0 0 18px rgba(0,0,0,.35); pointer-events: none; animation: pop .35s ease-out; white-space: nowrap; }
+
+/* ---------- กล่องข้อความลอย (ตอบผิด / จบด่าน / หยุดเกม) ---------- */
+.modal { position: absolute; inset: 0; z-index: 10; background: rgba(20,10,50,.55); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.panel { background: #fff; border-radius: 30px; padding: 22px 22px 20px; width: min(94vw, 620px); max-height: 92vh; overflow-y: auto; text-align: center;
+  box-shadow: 0 12px 0 rgba(0,0,0,.2); animation: pop .3s ease-out; }
+.panel h2 { margin: 0 0 8px; font-size: 32px; }
+.panel .big { font-size: 64px; line-height: 1.1; }
+.panel .q { font-size: 21px; font-weight: 700; color: #4c1d95; margin: 8px 0; }
+.panel .ans { font-size: 26px; font-weight: 900; color: #15803d; background: #dcfce7; border-radius: 18px; padding: 10px 14px; margin: 8px 0; }
+.panel .ex { font-size: 19px; color: #6b5ca5; margin: 6px 0 14px; }
+.panel .row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+.panel .stars { font-size: 60px; letter-spacing: 6px; }
+.panel .stars span { display: inline-block; animation: pop .45s ease-out both; }
+.panel .miss { text-align: left; background: #fff7ed; border-radius: 16px; padding: 10px 14px; margin-top: 10px; font-size: 17px; }
+.panel .miss div { padding: 4px 0; border-bottom: 1px dashed #fed7aa; }
+.panel .miss div:last-child { border: 0; }
+.panel .miss b { color: #15803d; }
+
+/* ---------- ร้านค้า ---------- */
+.shop { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; padding: 18px; max-width: 1000px; margin: 0 auto; }
+.item { background: #fff; border-radius: 26px; padding: 14px 8px; text-align: center; box-shadow: 0 7px 0 rgba(0,0,0,.2); display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.item .em { font-size: 64px; line-height: 1.1; }
+.item b { font-size: 18px; }
+.item.on { outline: 5px solid #22c55e; }
+
+/* ---------- การ์ดความรู้ / พ่อแม่ ---------- */
+.sheet { max-width: 900px; margin: 0 auto; padding: 16px; }
+.card { background: #fff; border-radius: 22px; padding: 14px 18px; margin-bottom: 12px; box-shadow: 0 5px 0 rgba(0,0,0,.15); font-size: 18px; }
+.card h3 { margin: 0 0 8px; font-size: 22px; }
+.flash { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px dashed #ddd6fe; align-items: baseline; }
+.flash:last-child { border: 0; }
+.flash .a { color: #15803d; font-weight: 800; white-space: nowrap; }
+.flash .x { color: #7c6fb0; font-size: 15px; }
+table.t { width: 100%; border-collapse: collapse; font-size: 16px; }
+table.t td, table.t th { padding: 6px 8px; border-bottom: 1px solid #ede9fe; text-align: left; }
+.kv { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin: 8px 0; }
+.kv div { background: #f5f3ff; border-radius: 14px; padding: 8px 12px; }
+.kv b { display: block; font-size: 24px; color: #6d28d9; }
+.barline { display: inline-block; height: 12px; background: #9B5DE5; border-radius: 6px; vertical-align: middle; }
