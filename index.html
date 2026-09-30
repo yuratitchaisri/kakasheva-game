@@ -2,34 +2,106 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#9B5DE5">
-  <title>เกมทบทวนบทเรียน — Kaka & Sheva</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2E7D6B">
+  <title>Kaka & Sheva — ห้องเรียนที่บ้าน</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="ทบทวนบทเรียน">
-  <link rel="stylesheet" href="style.css">
+  <meta name="apple-mobile-web-app-title" content="Kaka & Sheva">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, "Sarabun", "Leelawadee UI", sans-serif; background: #F4F7F6; color: #1F2A28; font-size: 18px; }
+    header { background: #2E7D6B; color: #fff; padding: 18px 20px; }
+    header h1 { margin: 0; font-size: 24px; }
+    header p { margin: 4px 0 0; opacity: .85; font-size: 15px; }
+    main { max-width: 760px; margin: 0 auto; padding: 16px; }
+    a.card { display: block; background: #fff; border-radius: 16px; padding: 18px 20px; margin-bottom: 14px; color: inherit; text-decoration: none; border: 2px solid transparent; }
+    a.card:active { border-color: #2E7D6B; }
+    .card .head { display: flex; align-items: center; gap: 14px; }
+    .card .emoji { font-size: 40px; }
+    .card h2 { margin: 0; font-size: 21px; }
+    .card .sub { color: #5B6B67; font-size: 15px; }
+    .card .go { margin-left: auto; font-size: 26px; color: #2E7D6B; }
+    .kids { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+    .kid { background: #F4F7F6; border-radius: 12px; padding: 12px 14px; }
+    .kid .name { font-weight: bold; }
+    .bar { height: 10px; background: #DDE7E4; border-radius: 5px; margin: 8px 0 6px; overflow: hidden; }
+    .bar div { height: 100%; background: #2E7D6B; }
+    .next { font-size: 15px; color: #8A5A00; }
+    .muted { color: #5B6B67; font-size: 14px; }
+    a.card.small { padding: 12px 20px; opacity: .8; }
+    a.card.small .emoji { font-size: 28px; }
+    a.card.small h2 { font-size: 17px; }
+    @media (max-width: 480px) { .kids { grid-template-columns: 1fr; } }
+  </style>
 </head>
 <body>
-  <div id="app"></div>
-  <div id="confetti"></div>
+  <header>
+    <h1>🏠 ห้องเรียนที่บ้าน</h1>
+    <p>Kaka & Sheva</p>
+  </header>
+  <main>
+    <a class="card" href="classroom/">
+      <div class="head">
+        <span class="emoji">📺</span>
+        <div>
+          <h2>ห้องเรียนออนไลน์ ครูต้น</h2>
+          <div class="sub">คลิปเรียน + เอกสาร · ติ๊กว่าดูถึงไหนแล้ว</div>
+        </div>
+        <span class="go">›</span>
+      </div>
+      <div class="kids" id="kids"></div>
+    </a>
 
-  <!-- โหลดตามลำดับ: ตัวการ์ตูน → ข้อมูลคำถาม → บทเรียน → ตัวเกม -->
-  <script src="buddies.js"></script>
-  <script src="data/quizzes.js"></script>
-  <script src="data/lessons.js"></script>
-  <script src="app.js"></script>
+    <a class="card small" href="game.html">
+      <div class="head">
+        <span class="emoji">🎮</span>
+        <div>
+          <h2>เกมทบทวนบทเรียน</h2>
+          <div class="sub">เนื้อหาสอบครั้งที่ 2 (ไม่ได้อัปเดตแล้ว)</div>
+        </div>
+        <span class="go">›</span>
+      </div>
+    </a>
+  </main>
 
-  <!-- Service Worker: เล่นออฟไลน์ + เพิ่มลงหน้าจอโฮมได้ (ทำงานเฉพาะบนเว็บ https ไม่ใช่ file://) -->
+  <script src="classroom/course-data.js"></script>
   <script>
-    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-      window.addEventListener('load', function () {
-        navigator.serviceWorker.register('sw.js').catch(function () {});
-      });
-    }
+    // อ่านความคืบหน้าเดียวกับหน้า classroom/ (localStorage ksl_classroom_v1 — โดเมนเดียวกัน)
+    (function () {
+      var state = {};
+      try { state = JSON.parse(localStorage.getItem("ksl_classroom_v1")) || {}; } catch (e) {}
+      var kids = state.kids || {};
+      var NAMES = { Sheva: "เชว่า", Kaka: "กาก้า" };
+
+      function isDone(c, ep) {
+        var d = ((kids[c.id] || {}).done || {})[ep.no];
+        return d === undefined ? !!ep.learned : d;
+      }
+      function esc(s) {
+        return String(s).replace(/[&<>"]/g, function (ch) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]; });
+      }
+
+      var html = Object.keys(NAMES).map(function (child) {
+        var total = 0, done = 0, next = null;
+        COURSES.filter(function (c) { return c.child === child; }).forEach(function (c) {
+          c.episodes.slice().sort(function (a, b) { return a.no - b.no; }).forEach(function (e) {
+            total++;
+            if (isDone(c, e)) done++;
+            else if (!next) next = c.id.replace(/ ป\.\d$/, "") + " ครั้งที่ " + e.no;
+          });
+        });
+        return '<div class="kid"><div class="name">' + NAMES[child] + '</div>' +
+          '<div class="bar"><div style="width:' + (total ? Math.round(done / total * 100) : 0) + '%"></div></div>' +
+          '<div class="muted">ดูจบ ' + done + " / " + total + " ครั้ง</div>" +
+          (next ? '<div class="next">👉 ถัดไป: ' + esc(next) + "</div>" : '<div class="next">🎉 ดูครบแล้ว</div>') +
+          "</div>";
+      }).join("");
+      document.getElementById("kids").innerHTML = html;
+    })();
   </script>
 </body>
 </html>
