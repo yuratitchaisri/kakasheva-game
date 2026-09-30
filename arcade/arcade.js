@@ -27,6 +27,7 @@
     history:   { c: ['#c084fc', '#7e22ce'], sky: ['#e9d5ff', '#faf5ff'], grass: ['#a7f3d0', '#94e8c0'], road: ['#b8a58a', '#ab987c'], deco: ['🛕', '🏯', '🌳'], rock: '🗿', boss: '🐉', bossName: 'มังกรขี้ลืม' },
     english:   { c: ['#fb7185', '#e11d48'], sky: ['#fecdd3', '#fff1f2'], grass: ['#86efac', '#74e39b'], road: ['#a1a1aa', '#94949d'], deco: ['🏙️', '🌳', '🚌'], rock: '🚧', boss: '👾', bossName: 'Space Monster' }
   };
+  THEMES.mix = { c: ['#7c3aed', '#db2777'], sky: ['#c4b5fd', '#fce7f3'], grass: ['#f0abfc', '#e7a0f5'], road: ['#a78bfa', '#9d80f3'], deco: ['⭐', '🌈', '🏰'], rock: '🚧', boss: '👑', bossName: 'ราชาปีศาจรวมวิชา' };
   function theme(key) { return THEMES[key] || THEMES.thai; }
 
   // ---------- บันทึก ----------
@@ -174,13 +175,14 @@
 
   // ---------- เตรียมคิวคำถามของด่าน ----------
   function prepMc(m, subj, li, qi) {
-    return { id: subj.key + ':' + li + ':' + qi, q: m.q, say: m.say, c: m.c.slice(0, 3), ex: m.ex || '', clock: m.clock, lang: subj.lang, gen: m.gen };
+    return { id: subj.key + ':' + li + ':' + qi, q: m.q, say: m.say, c: m.c.slice(0, 3), ex: m.ex || '', clock: m.clock, lang: subj.lang, gen: m.gen, skey: subj.key, sname: subj.name };
   }
-  function buildQueue(kid, subj, li) {
+  function buildQueue(kid, subj, li, nOver) {
     var beg = beginner(kid), nQ, levels, mcs = [], gens = [], sorts = [];
     if (li === 'boss') {
       levels = subj.levels; nQ = beg ? 9 : 12;
     } else { levels = [subj.levels[li]]; nQ = beg ? 7 : 10; }
+    if (nOver) nQ = nOver;
     levels.forEach(function (lv) {
       var idx = subj.levels.indexOf(lv);
       (lv.mc || []).forEach(function (m, qi) { mcs.push(prepMc(m, subj, idx, qi)); });
@@ -195,18 +197,60 @@
     var rest = shuffle(mcs.filter(function (m) { return wrongFirst.indexOf(m) < 0; }));
     var nGen = gens.length ? Math.round(nQ * (mcs.length ? 0.35 : 1)) : 0;
     var chosen = wrongFirst.concat(rest).slice(0, nQ - nGen);
-    for (var i = 0; i < nGen; i++) { var gq = genQ(pick(gens), subj.lang); if (gq) { gq.id = 'gen:' + subj.key + ':' + gq.gen; gq.lang = subj.lang; chosen.push(gq); } }
+    for (var i = 0; i < nGen; i++) { var gq = genQ(pick(gens), subj.lang); if (gq) { gq.id = 'gen:' + subj.key + ':' + gq.gen; gq.lang = subj.lang; gq.skey = subj.key; gq.sname = subj.name; chosen.push(gq); } }
     chosen = shuffle(chosen).map(function (q) { return { kind: 'q', q: q }; });
     if (sorts.length) {
       var sp = shuffle(sorts);
       var nb = li === 'boss' ? 2 : 1;
       for (var j = 0; j < nb && j < sp.length; j++) {
         var at = Math.round(chosen.length * (j + 1) / (nb + 1));
-        chosen.splice(at, 0, { kind: 'blast', s: sp[j] });
+        chosen.splice(at, 0, { kind: 'blast', s: sp[j], lang: subj.lang });
       }
     }
     return chosen;
   }
+
+  // =====================================================================
+  //  โหมดผจญภัย (โหมดหลัก) — ด่านต่อกันไปเรื่อย ๆ · 1 ด่าน = 1 วิชา สลับวิชาทุกด่าน
+  //  ทุก 5 ด่าน = บอสใหญ่คละวิชา (เป็นช่วง ๆ วิชาละ 2–3 ข้อ ไม่สลับทุกข้อ) · ทุก 10 ด่าน = กล่องสมบัติ
+  //  เกมเลือกวิชาให้เอง: เน้นวิชาที่ยังมีด่านไม่ได้ดาว + วิชาที่ผิดบ่อย · ไม่ซ้ำ 2 ด่านล่าสุด
+  // =====================================================================
+  function advState(k) { k.adv = k.adv || { lv: 1, recent: [], log: {} }; return k.adv; }
+  function subjByKey(kid, key) { return (kidInfo(kid).subjects || []).filter(function (s) { return s.key === key; })[0]; }
+  function advPick(kid) {
+    var k = K(kid), a = advState(k), subs = kidInfo(kid).subjects || [];
+    if (a.cur && a.cur.n === a.lv && (a.cur.boss || subjByKey(kid, a.cur.skey))) return a.cur;   // แพ้แล้วเล่นใหม่ = ด่านเดิม
+    var n = a.lv;
+    if (n % 5 === 0) { a.cur = { n: n, boss: true }; save(); return a.cur; }
+    var cands = subs.filter(function (s) { return a.recent.indexOf(s.key) < 0; });
+    if (!cands.length) cands = subs;
+    var ws = cands.map(function (s) {
+      var zero = s.levels.filter(function (_, i) { return !k.stars[s.key + ':' + i]; }).length / s.levels.length;
+      var wr = Object.keys(k.wrong).filter(function (id) { return id.indexOf(s.key + ':') === 0 || id.indexOf('gen:' + s.key + ':') === 0; }).length;
+      return 1 + 2 * zero + Math.min(3, wr * 0.3);
+    });
+    var tot = ws.reduce(function (x, y) { return x + y; }, 0), r = Math.random() * tot, si = 0;
+    for (; si < ws.length - 1; si++) { r -= ws[si]; if (r <= 0) break; }
+    var sj = cands[si], li = 0, bs = 99;
+    sj.levels.forEach(function (_, i) { var st = k.stars[sj.key + ':' + i] || 0; if (st < bs) { bs = st; li = i; } });   // ด่านที่ดาวน้อยสุด (เรียงตามบท)
+    if (bs >= 3) li = rnd(0, sj.levels.length - 1);
+    a.cur = { n: n, skey: sj.key, li: li }; save();
+    return a.cur;
+  }
+  function buildMix(kid) {
+    var beg = beginner(kid), subs = shuffle(kidInfo(kid).subjects || []).slice(0, 4), per = beg ? 2 : 3, out = [];
+    subs.forEach(function (sj) {
+      var li = rnd(0, sj.levels.length - 1);
+      buildQueue(kid, sj, li, per + 2).filter(function (it) { return it.kind === 'q'; }).slice(0, per).forEach(function (it) { out.push(it); });
+    });
+    var withSort = shuffle((kidInfo(kid).subjects || []).filter(function (sj) { return sj.levels.some(function (l) { return l.sort && l.sort.length; }); }));
+    if (withSort.length) {
+      var sj = withSort[0], lv = shuffle(sj.levels.filter(function (l) { return l.sort && l.sort.length; }))[0];
+      out.splice(Math.round(out.length / 2), 0, { kind: 'blast', s: pick(lv.sort), lang: sj.lang });
+    }
+    return out;
+  }
+  var MIX = { key: 'mix', name: 'บอสใหญ่คละวิชา', emoji: '👑', lang: 'th', levels: [] };
 
   // =====================================================================
   //  หน้าจอเมนู
@@ -217,6 +261,7 @@
   function render() {
     hush();
     if (view === 'home') return renderHome();
+    if (view === 'adv') return renderAdv();
     if (view === 'world') return renderWorld();
     if (view === 'levels') return renderLevels();
     if (view === 'shop') return renderShop();
@@ -261,7 +306,7 @@
   }
 
   function renderWorld() {
-    var info = kidInfo(cur.kid), k = K(cur.kid), h = topbar(heroImg(k.hero, 34) + ' ' + esc(info.label || cur.kid) + ' · เลือกโลก', 'home');
+    var info = kidInfo(cur.kid), k = K(cur.kid), h = topbar('📚 ฝึกรายวิชา · เลือกวิชาเอง', 'adv');
     h += '<div class="worlds">';
     (info.subjects || []).forEach(function (s, i) {
       var th = theme(s.key), st = subjStars(cur.kid, s), bossDone = (k.stars[s.key + ':boss'] || 0) > 0;
@@ -274,13 +319,39 @@
     dailyGift();
   }
 
+  function renderAdv() {
+    var info = kidInfo(cur.kid), k = K(cur.kid), a = advState(k), nx = advPick(cur.kid), n = a.lv;
+    var h = topbar(heroImg(k.hero, 34) + ' ' + esc(info.label || cur.kid) + ' · ผจญภัย', 'home');
+    var sj = nx.boss ? null : subjByKey(cur.kid, nx.skey), th = theme(nx.boss ? 'mix' : nx.skey);
+    var what = nx.boss ? '⚔️ <b>บอสใหญ่!</b> คละหลายวิชา' : sj.emoji + ' <b>' + esc(sj.name) + '</b> — ' + esc(sj.levels[nx.li].title);
+    var toChest = 10 - ((n - 1) % 10) - 1;
+    h += '<div class="adv"><div class="advcard" style="background:linear-gradient(160deg,' + th.c[0] + ',' + th.c[1] + ')">' +
+      '<div class="advhero">' + heroImg(k.hero, 130) + '<img class="av" width="120" height="120" src="' + bossImg(nx.boss ? 'mix' : nx.skey) + '"></div>' +
+      '<div class="advn">ด่าน ' + n + '</div><div class="advwhat">' + what + '</div>' +
+      '<button class="btn green advgo" data-act="advplay">▶ ผจญภัยต่อ!</button>' +
+      '<div class="advsub">' + (toChest === 0 ? '🎁 ด่านนี้มีกล่องสมบัติ!' : '🎁 อีก ' + toChest + ' ด่านถึงกล่องสมบัติ') + '</div></div>';
+    // เส้นทาง: ด่านที่ผ่านมา 3 ด่าน → ด่านปัจจุบัน → ด่านข้างหน้า
+    h += '<div class="trail">';
+    for (var i = Math.max(1, n - 3); i <= n + 6; i++) {
+      var cls = 'tn', ic = '❓', sub = '';
+      if (i < n) { var lg = a.log[i] || {}; cls += ' done'; ic = lg.e || '✅'; sub = starStr(lg.st || 0); }
+      else if (i === n) { cls += ' now'; ic = nx.boss ? '⚔️' : sj.emoji; sub = 'ตอนนี้'; }
+      else if (i % 5 === 0) { cls += ' boss'; ic = '⚔️'; sub = 'บอส'; }
+      if (i > n && i % 10 === 0) { ic = '🎁'; sub = 'บอส+สมบัติ'; }
+      h += '<div class="' + cls + '"><div class="ti">' + ic + '</div><div class="tl">' + i + '</div><div class="ts">' + sub + '</div></div>';
+    }
+    h += '</div><div class="advfoot"><button class="btn blue" data-act="practice">📚 ฝึกรายวิชา (เลือกวิชาเอง)</button></div></div>';
+    app.innerHTML = h;
+    dailyGift();
+  }
+
   function dailyGift() {
     var k = K(cur.kid), t = today();
     if (k.gift === t) return;
     k.gift = t; k.coins += 30; save();
     setTimeout(function () {
       modalMenu('<div class="big">🎁</div><h2>ของขวัญประจำวัน!</h2><p class="q">มาเล่นวันนี้ ได้ 💎 30 เพชร</p>' +
-        '<div class="row"><button class="btn green" data-close>เย่! 🎉</button></div>', function () { renderWorld(); });
+        '<div class="row"><button class="btn green" data-close>เย่! 🎉</button></div>', function () { render(); });
       SFX.win();
     }, 250);
   }
@@ -397,7 +468,9 @@
   app.addEventListener('click', function (e) {
     var t = e.target.closest('[data-act]'); if (!t) return;
     var act = t.getAttribute('data-act'); audio(); SFX.click();
-    if (act === 'kid') { cur.kid = t.getAttribute('data-kid'); go('world'); }
+    if (act === 'kid') { cur.kid = t.getAttribute('data-kid'); go('adv'); }
+    else if (act === 'advplay') { startAdv(); }
+    else if (act === 'practice') { go('world'); }
     else if (act === 'back') { go(t.getAttribute('data-to')); }
     else if (act === 'subj') { cur.subj = kidInfo(cur.kid).subjects[+t.getAttribute('data-i')]; go('levels'); }
     else if (act === 'shop') { cur.shopBack = view === 'shop' ? cur.shopBack : view; go('shop'); }
@@ -430,22 +503,33 @@
   // =====================================================================
   var G = null;
 
-  function startLevel(li) {
+  function timeUp() {
     var k = K(cur.kid), lim = S.settings.limit, td = dayRec(k);
     if (lim && td.sec >= lim * 60) {
       modalMenu('<div class="big">👀💤</div><h2>วันนี้เล่นครบ ' + lim + ' นาทีแล้ว</h2><p class="q">พักสายตากันนะ มองไกล ๆ ออกไปนอกหน้าต่าง<br>พรุ่งนี้มาตะลุยต่อ! 🌈</p><div class="row"><button class="btn green" data-close>โอเค</button></div>');
-      return;
+      return true;
     }
+    return false;
+  }
+  function startLevel(li) {
+    if (timeUp()) return;
     G = new Game(cur.kid, cur.subj, li);
+  }
+  function startAdv() {
+    if (timeUp()) return;
+    var nx = advPick(cur.kid);
+    if (nx.boss) G = new Game(cur.kid, MIX, 'mix', nx);
+    else G = new Game(cur.kid, subjByKey(cur.kid, nx.skey), nx.li, nx);
   }
 
   var Z_NEAR = 3, FAR = 70, STOP_Z = 6;
 
-  function Game(kid, subj, li) {
+  function Game(kid, subj, li, adv) {
     var g = this;
-    g.kid = kid; g.subj = subj; g.li = li; g.th = theme(subj.key); g.beg = beginner(kid);
-    g.lvTitle = li === 'boss' ? '👑 บอสใหญ่' : 'ด่าน ' + (li + 1) + ' · ' + subj.levels[li].title;
-    g.queue = buildQueue(kid, subj, li);
+    g.kid = kid; g.subj = subj; g.li = li; g.adv = adv || null; g.th = theme(subj.key); g.beg = beginner(kid);
+    if (adv) g.lvTitle = 'ด่าน ' + adv.n + ' · ' + (adv.boss ? '⚔️ บอสใหญ่คละวิชา' : subj.emoji + ' ' + subj.name + ' — ' + subj.levels[li].title);
+    else g.lvTitle = li === 'boss' ? '👑 บอสใหญ่' : 'ด่าน ' + (li + 1) + ' · ' + subj.levels[li].title;
+    g.queue = adv && adv.boss ? buildMix(kid) : buildQueue(kid, subj, li, adv ? (beginner(kid) ? 6 : 8) : 0);
     g.maxHp = g.queue.reduce(function (s, it) { return s + (it.kind === 'blast' ? 2 : 1); }, 0);
     g.hearts = g.beg ? 4 : 3; g.maxHearts = g.hearts;
     g.coins = 0; g.mist = 0; g.okN = 0; g.combo = 0; g.missed = []; g.requeued = {};
@@ -627,7 +711,7 @@
   Game.prototype.nextItem = function () {
     var g = this, it = g.queue.shift();
     if (!it) { g.win(); return; }
-    if (it.kind === 'blast') { g.startBlast(it.s); return; }
+    if (it.kind === 'blast') { g.startBlast(it.s, it.lang); return; }
     var q = it.q, labels = shuffle(q.c);
     // ประตูโผล่ไม่ไกล แล้ววิ่งมาหยุดรอตรงหน้า (STOP_Z) จนกว่าจะเลือกคำตอบ — ไม่มีจับเวลา
     g.gate = { q: q, labels: labels, right: labels.indexOf(q.c[0]) - 1, z: 24, item: it, chosen: false };
@@ -643,7 +727,7 @@
   };
   Game.prototype.sayQ = function (force) {
     var g = this;
-    if (g.state === 'blast' && g.blast) { speak(g.blast.s.rule, g.subj.lang); return; }
+    if (g.state === 'blast' && g.blast) { speak(g.blast.s.rule, g.blast.lang); return; }
     if (!g.gate) return;
     var q = g.gate.q, en = q.lang === 'en';
     if (!force && !g.beg && !en) return; // Kaka อ่านเองได้ → อ่านให้ฟังเฉพาะวิชาอังกฤษหรือเมื่อกด 🔊
@@ -677,7 +761,7 @@
   Game.prototype.passGate = function () {
     var g = this, gt = g.gate, lane = Math.round(g.player.x), q = gt.q;
     g.gate = null; g.markCard();
-    var k = K(g.kid), dr = dayRec(k), sr = k.subj[g.subj.key] = k.subj[g.subj.key] || { q: 0, ok: 0 };
+    var sk = q.skey || g.subj.key, k = K(g.kid), dr = dayRec(k), sr = k.subj[sk] = k.subj[sk] || { q: 0, ok: 0 };
     dr.q++; sr.q++;
     var px = g.W / 2 + g.player.x * g.laneW, py = g.groundY;
     if (lane === gt.right) {
@@ -696,7 +780,7 @@
       SFX.bad(); g.burst(px, py - 60, ['💥', '💢'], 8);
       var chosen = gt.labels[lane + 1];
       g.missed.push({ q: q.q, a: q.c[0], you: chosen });
-      var w = k.wrong[q.id] = k.wrong[q.id] || { q: q.gen ? 'โจทย์สุ่ม เช่น ' + q.q : q.q, a: q.gen ? q.c[0] : q.c[0], s: g.subj.name, n: 0 };
+      var w = k.wrong[q.id] = k.wrong[q.id] || { q: q.gen ? 'โจทย์สุ่ม เช่น ' + q.q : q.q, a: q.gen ? q.c[0] : q.c[0], s: q.sname || g.subj.name, n: 0 };
       w.n++; w.last = chosen;
       // ข้อที่ผิดวนกลับมาท้ายคิวอีกรอบ (บอสฟื้นพลัง) ไม่เกิน 2 ครั้งต่อข้อ
       g.requeued[q.id] = (g.requeued[q.id] || 0) + 1;
@@ -728,17 +812,17 @@
   };
 
   // ---------- ด่านยิงฟอง ----------
-  Game.prototype.startBlast = function (s) {
+  Game.prototype.startBlast = function (s, lang) {
     var g = this, n = g.beg ? 5 : 7;
     var items = shuffle(s.yes).slice(0, n).map(function (x) { return { t: x, yes: true }; })
       .concat(shuffle(s.no).slice(0, n).map(function (x) { return { t: x, yes: false }; }));
-    g.blast = { s: s, items: shuffle(items), spawnT: 0.8, hit: 0, bad: 0, miss: 0, total: Math.min(n, s.yes.length) };
+    g.blast = { s: s, lang: lang || g.subj.lang, items: shuffle(items), spawnT: 0.8, hit: 0, bad: 0, miss: 0, total: Math.min(n, s.yes.length) };
     g.bubbles = [];
     g.state = 'blast';
     g.qt.textContent = '🎯 ' + s.rule; g.qbox.classList.remove('hidden'); g.qbox.classList.add('rule');
     g.clockEl.style.display = 'none'; g.cards.classList.add('hidden'); g.jumpBtn.style.display = 'none'; g.layoutHud();
     g.toast('🎯 ด่านยิงฟอง!', 1200, '#0ea5e9');
-    speak(s.rule, g.subj.lang);
+    speak(s.rule, g.blast.lang);
   };
   Game.prototype.tapBubble = function (x, y) {
     var g = this, best = null, bd = 1e9;
@@ -783,8 +867,17 @@
     var g = this, k = K(g.kid), key = g.subj.key + ':' + g.li;
     var stars = !won ? 0 : g.mist === 0 ? 3 : g.mist <= 2 ? 2 : 1;
     var sizeB = won ? Math.max(0, Math.round((g.player.scale - 1) * 150)) : 0;
-    var prev = k.stars[key] || 0, bonus = won ? stars * 10 + (stars > prev ? 20 : 0) + sizeB : 0;
-    if (stars > prev) k.stars[key] = stars;
+    var prev = g.subj.key === 'mix' ? 3 : (k.stars[key] || 0), bonus = won ? stars * 10 + (stars > prev ? 20 : 0) + sizeB : 0;
+    if (stars > prev && g.subj.key !== 'mix') k.stars[key] = stars;   // ด่านผจญภัยนับดาวให้ด่านรายวิชาด้วย
+    var chest = 0;
+    if (g.adv && won) {
+      var a = advState(k), n = g.adv.n;
+      a.log[n] = { e: g.adv.boss ? '⚔️' : g.subj.emoji, st: stars };
+      Object.keys(a.log).forEach(function (x) { if (+x < n - 30) delete a.log[x]; });
+      if (!g.adv.boss) { a.recent = [g.subj.key].concat(a.recent).slice(0, 2); }
+      a.lv = n + 1; a.cur = null; a.best = Math.max(a.best || 0, n);
+      if (n % 10 === 0) { chest = 100; bonus += chest; }
+    }
     k.coins += g.coins + bonus;
     g.recordTime(); save();
     if (won) SFX.win();
@@ -795,18 +888,21 @@
       miss = '<div class="miss"><b style="color:#9a3412">📝 จำให้แม่น:</b>' + g.missed.slice(0, 8).map(function (m) { return '<div>' + esc(m.q) + ' → <b>' + esc(m.a) + '</b></div>'; }).join('') + '</div>';
     }
     var nextBtn = '';
-    if (won && g.li !== 'boss') {
+    if (g.adv) { if (won) nextBtn = '<button class="btn green" data-m="advnext">ด่าน ' + (g.adv.n + 1) + ' ▶</button>'; }
+    else if (won && g.li !== 'boss') {
       var ni = g.li + 1 < g.subj.levels.length ? g.li + 1 : 'boss';
       if (levelUnlocked(g.subj, ni)) nextBtn = '<button class="btn green" data-m="next" data-n="' + ni + '">ด่านต่อไป ▶</button>';
     }
     var html = won
       ? '<div class="big">' + heroImg(k.hero, Math.round(80 + 50 * Math.min(g.player.scale, 1.6))) + '</div><h2>🏆 ชนะ ' + esc(g.th.bossName) + '!</h2><div class="stars">' + [0, 1, 2].map(function (i) { return '<span style="animation-delay:' + (0.2 + i * 0.25) + 's">' + (i < stars ? '⭐' : '☆') + '</span>'; }).join('') + '</div>' +
-        '<p class="q">ตอบถูก ' + g.okN + ' ข้อ · 💎 +' + (g.coins + bonus) + '</p><p class="ex">💪 ตัวใหญ่ x' + g.player.scale.toFixed(1) + (sizeB ? ' → โบนัส 💎 +' + sizeB : '') + '</p>' + (stars < 3 ? '<p class="ex">ตอบถูกหมดไม่พลาดเลย = ⭐⭐⭐</p>' : '<p class="ex">เพอร์เฟกต์! ไม่พลาดสักข้อ 🎉</p>')
+        (chest ? '<p class="q" style="font-size:26px">🎁 เปิดกล่องสมบัติ! 💎 +' + chest + '</p>' : '') + '<p class="q">ตอบถูก ' + g.okN + ' ข้อ · 💎 +' + (g.coins + bonus) + '</p><p class="ex">💪 ตัวใหญ่ x' + g.player.scale.toFixed(1) + (sizeB ? ' → โบนัส 💎 +' + sizeB : '') + '</p>' + (stars < 3 ? '<p class="ex">ตอบถูกหมดไม่พลาดเลย = ⭐⭐⭐</p>' : '<p class="ex">เพอร์เฟกต์! ไม่พลาดสักข้อ 🎉</p>')
       : '<div class="big">💔</div><h2>หัวใจหมดแล้ว</h2><p class="q">ไม่เป็นไร! อ่านข้อที่พลาดแล้วลองใหม่นะ<br>💎 เก็บได้ ' + g.coins + ' เพชร</p>';
-    var m = g.modal(html + miss + '<div class="row"><button class="btn gray" data-m="map">🗺️ แผนที่</button><button class="btn" data-m="again">🔁 เล่นอีก</button>' + nextBtn + '</div>', function (a) {
+    var againBtn = g.adv ? (won ? '' : '<button class="btn" data-m="advagain">🔁 ลองใหม่</button>') : '<button class="btn" data-m="again">🔁 เล่นอีก</button>';
+    var m = g.modal(html + miss + '<div class="row"><button class="btn gray" data-m="map">🗺️ แผนที่</button>' + againBtn + nextBtn + '</div>', function (a) {
       var kid = g.kid, subj = g.subj, li = g.li;
       g.quit();
-      if (a === 'again') { startLevel(li); }
+      if (a === 'advnext' || a === 'advagain') { startAdv(); }
+      else if (a === 'again') { startLevel(li); }
       else if (a === 'next') { startLevel(li + 1 < subj.levels.length ? li + 1 : 'boss'); }
     });
     g.state = 'done';
@@ -1119,6 +1215,6 @@
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { if (!G) render(); });
   // ?kid=Kaka เปิดตรงไปที่แผนที่ของลูกคนนั้น
   var qk = (location.search.match(/[?&]kid=([^&]+)/) || [])[1];
-  if (qk && DATA.kids[decodeURIComponent(qk)]) { cur.kid = decodeURIComponent(qk); view = 'world'; }
+  if (qk && DATA.kids[decodeURIComponent(qk)]) { cur.kid = decodeURIComponent(qk); view = 'adv'; }
   render();
 })();

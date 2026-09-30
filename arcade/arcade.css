@@ -159,3 +159,23 @@ img.av { vertical-align: middle; image-rendering: auto; }
 .cards3.asking button { animation: pulse 1s ease-in-out infinite; }
 .cards3.asking button:nth-child(2) { animation-delay: .15s; } .cards3.asking button:nth-child(3) { animation-delay: .3s; }
 @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+
+/* ---------- โหมดผจญภัย ---------- */
+.adv { max-width: 760px; margin: 0 auto; padding: 16px 16px 40px; display: flex; flex-direction: column; gap: 16px; }
+.advcard { border-radius: 32px; padding: 18px 16px 18px; text-align: center; color: #fff; box-shadow: 0 10px 0 rgba(0,0,0,.22), 0 16px 26px rgba(0,0,0,.2); }
+.advhero { display: flex; justify-content: center; align-items: flex-end; gap: 30px; }
+.advhero img:first-child { animation: bob 1.4s ease-in-out infinite; }
+.advhero img:last-child { animation: wiggle 1.6s ease-in-out infinite; }
+.advn { font-size: clamp(40px, 8vw, 64px); font-weight: 900; line-height: 1.1; text-shadow: 0 4px 0 rgba(0,0,0,.25); }
+.advwhat { font-size: 22px; margin: 4px 0 14px; text-shadow: 0 2px 0 rgba(0,0,0,.25); }
+.advgo { font-size: 30px; padding: 16px 44px; border-radius: 28px; animation: pulse 1.3s ease-in-out infinite; }
+.advsub { margin-top: 12px; font-size: 18px; font-weight: 700; }
+.trail { display: flex; gap: 8px; overflow-x: auto; padding: 6px 4px 12px; }
+.tn { flex: none; width: 72px; background: rgba(255,255,255,.85); border-radius: 20px; padding: 8px 4px; text-align: center; box-shadow: 0 5px 0 rgba(0,0,0,.15); }
+.tn .ti { font-size: 32px; line-height: 1.1; }
+.tn .tl { font-size: 17px; font-weight: 900; }
+.tn .ts { font-size: 11px; color: #6b5ca5; font-weight: 700; min-height: 14px; white-space: nowrap; }
+.tn.done { opacity: .75; }
+.tn.now { background: #fde047; transform: scale(1.12); outline: 4px solid #fff; }
+.tn.boss { background: #1e1b4b; color: #fff; } .tn.boss .ts { color: #fde68a; }
+.advfoot { text-align: center; }

@@ -35,7 +35,8 @@
     sciinter: { head: '#65A30D', torso: '#3F6212', arms: '#65A30D', legs: '#365314', face: 'angry', hat: 'leaf', hatC: '#16A34A' },
     social: { head: '#EF4444', torso: '#991B1B', arms: '#EF4444', legs: '#450A0A', face: 'angry', hat: 'horns', hatC: '#1F2937' },
     history: { head: '#27272A', torso: '#18181B', arms: '#3F3F46', legs: '#18181B', hat: 'helmet', hatC: '#27272A', face: 'glow', extra: ['cape'], capeC: '#7F1D1D' },
-    english: { head: '#86EFAC', torso: '#7C3AED', arms: '#86EFAC', legs: '#4C1D95', face: 'alien' }
+    english: { head: '#86EFAC', torso: '#7C3AED', arms: '#86EFAC', legs: '#4C1D95', face: 'alien' },
+    mix: { head: '#A855F7', torso: '#581C87', arms: '#A855F7', legs: '#3B0764', face: 'glow', hat: 'crown', hatC: '#FACC15', extra: ['cape'], capeC: '#DB2777' }
   };
   var BY = {}; SKINS.forEach(function (s) { BY[s.id] = s; });
 
