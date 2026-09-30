@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2E7D6B">
+  <title>ห้องเรียนออนไลน์ — Kaka & Sheva</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📺</text></svg>">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ห้องเรียน">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, "Sarabun", "Leelawadee UI", sans-serif; background: #F4F7F6; color: #1F2A28; font-size: 18px; }
+    header { background: #2E7D6B; color: #fff; padding: 16px 20px; }
+    header h1 { margin: 0; font-size: 22px; }
+    main { max-width: 760px; margin: 0 auto; padding: 16px; }
+    .tabs { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+    .tabs button { flex: 1 1 40%; padding: 14px; font-size: 20px; border: 2px solid #2E7D6B; background: #fff; color: #2E7D6B; border-radius: 12px; font-family: inherit; cursor: pointer; }
+    .tabs button.on { background: #2E7D6B; color: #fff; }
+    .summary { background: #fff; border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
+    .summary .course { font-weight: bold; }
+    .bar { height: 12px; background: #DDE7E4; border-radius: 6px; margin: 10px 0 6px; overflow: hidden; }
+    .bar div { height: 100%; background: #2E7D6B; }
+    .muted { color: #5B6B67; font-size: 15px; }
+    .ep { background: #fff; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; border: 2px solid transparent; }
+    .ep.next { border-color: #F2A900; }
+    .ep.done { opacity: .65; }
+    .ep .top { display: flex; align-items: center; gap: 10px; }
+    .ep .icon { font-size: 26px; width: 34px; text-align: center; }
+    .ep .title { font-weight: bold; }
+    .tag { display: inline-block; background: #F2A900; color: #1F2A28; font-size: 14px; padding: 2px 10px; border-radius: 10px; margin-left: 6px; font-weight: bold; }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; padding-left: 44px; }
+    .actions a, .actions button, .actions span { padding: 10px 14px; font-size: 17px; border-radius: 10px; border: 0; font-family: inherit; text-decoration: none; cursor: pointer; }
+    .play { background: #2E7D6B; color: #fff; }
+    .doc { background: #E6EEF9; color: #1F4E8C; }
+    .coursedocs { background: #fff; border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
+    .cd-title { font-weight: bold; margin-bottom: 4px; }
+    .coursedocs .actions { padding-left: 0; }
+    .coursedocs.parent { background: #FFF6E5; border: 1px solid #F0D9A8; }
+    .coursedocs.parent .doc { background: #F5E3C3; color: #8A5A00; }
+    .pnote { font-size: 13px; font-weight: normal; color: #B07A1E; background: #F5E3C3; padding: 1px 8px; border-radius: 8px; margin-left: 6px; }
+    .mark { background: #EEF2F1; color: #1F2A28; }
+    .mark.on { background: #D5F0E3; color: #1B6B45; }
+    .wait { background: #EEF2F1; color: #8A9794; }
+    footer { text-align: center; padding: 20px; }
+    footer button { background: none; border: 0; color: #8A9794; font-family: inherit; font-size: 14px; text-decoration: underline; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <header><h1>📺 ห้องเรียนออนไลน์</h1></header>
+  <main>
+    <div class="tabs" id="tabs"></div>
+    <div id="view"></div>
+  </main>
+  <footer><button id="reset">ล้างการติ๊กของคนนี้ (พ่อแม่)</button></footer>
+
+  <script src="course-data.js"></script>
+  <script>
+    // ความคืบหน้าเก็บในเครื่อง (localStorage) — ผูกกับ iPad + Safari เครื่องนั้น
+    var KEY = "ksl_classroom_v1";
+    var state = load();
+
+    function load() {
+      try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; }
+    }
+    function save() { localStorage.setItem(KEY, JSON.stringify(state)); }
+    function kid(child) {
+      state.kids = state.kids || {};
+      return state.kids[child] = state.kids[child] || { done: {}, opened: {} };
+    }
+    function isDone(c, ep) {
+      var d = kid(c.id).done[ep.no];
+      return d === undefined ? !!ep.learned : d;
+    }
+    function thaiTime(ts) {
+      return new Date(ts).toLocaleString("th-TH", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+    }
+    function esc(s) {
+      return String(s).replace(/[&<>"]/g, function (ch) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]; });
+    }
+
+    function render() {
+      var c = COURSES.filter(function (x) { return x.id === state.current; })[0] || COURSES[0];
+      state.current = c.id;
+
+      document.getElementById("tabs").innerHTML = COURSES.map(function (x) {
+        return '<button data-course="' + x.id + '" class="' + (x === c ? "on" : "") + '">' + esc(x.label) + "</button>";
+      }).join("");
+
+      var k = kid(c.id);
+      var eps = c.episodes.slice().sort(function (a, b) { return a.no - b.no; });
+      var doneCount = eps.filter(function (e) { return isDone(c, e); }).length;
+      var next = eps.filter(function (e) { return !isDone(c, e); })[0];
+      var last = eps.filter(function (e) { return k.opened[e.no]; })
+                    .sort(function (a, b) { return k.opened[b.no] - k.opened[a.no]; })[0];
+
+      var html = '<div class="summary"><div class="course">' + esc(c.course) + "</div>" +
+        '<div class="bar"><div style="width:' + Math.round(doneCount / eps.length * 100) + '%"></div></div>' +
+        '<div class="muted">ดูจบแล้ว ' + doneCount + " จาก " + eps.length + " ครั้ง" +
+        (last ? " · เปิดล่าสุด: ครั้งที่ " + last.no + " (" + thaiTime(k.opened[last.no]) + ")" : "") + "</div></div>";
+
+      var groups = c.docGroups || (c.docs && c.docs.length ? [{ title: "เอกสารเรียน (ใช้ทั้งคอร์ส)", docs: c.docs }] : []);
+      groups.forEach(function (g) {
+        if (!g.docs || !g.docs.length) return;
+        html += '<div class="coursedocs' + (g.parent ? " parent" : "") + '"><div class="cd-title">' +
+          (g.parent ? "🔒 " : "📚 ") + esc(g.title) +
+          (g.parent ? ' <span class="pnote">สำหรับพ่อแม่</span>' : "") + '</div><div class="actions">';
+        g.docs.forEach(function (d) {
+          html += d.link
+            ? '<a class="doc" href="' + esc(d.link) + '" target="_blank" rel="noopener">📄 ' + esc(d.name) + "</a>"
+            : '<span class="doc wait">📄 ' + esc(d.name) + " (รอลิงก์)</span>";
+        });
+        html += "</div></div>";
+      });
+
+      html += eps.map(function (e) {
+        var done = isDone(c, e), isNext = e === next;
+        var icon = done ? "✅" : isNext ? "👉" : k.opened[e.no] ? "👀" : "⬜";
+        var acts = e.link
+          ? '<a class="play" href="' + esc(e.link) + '" target="_blank" rel="noopener" data-open="' + e.no + '">▶ ดูคลิป</a>'
+          : '<span class="wait">⏳ รอลิงก์</span>';
+        (e.docs || []).forEach(function (d) {
+          acts += d.link
+            ? '<a class="doc" href="' + esc(d.link) + '" target="_blank" rel="noopener">📄 ' + esc(d.name) + "</a>"
+            : '<span class="doc wait">📄 ' + esc(d.name) + " (รอลิงก์)</span>";
+        });
+        acts += '<button class="mark' + (done ? " on" : "") + '" data-mark="' + e.no + '">' + (done ? "✔ ดูจบแล้ว" : "กดเมื่อดูจบ") + "</button>";
+        return '<div class="ep' + (done ? " done" : "") + (isNext ? " next" : "") + '">' +
+          '<div class="top"><span class="icon">' + icon + "</span><div>" +
+          '<div class="title">ครั้งที่ ' + e.no + (isNext ? '<span class="tag">ดูถึงตรงนี้</span>' : "") + "</div>" +
+          '<div class="muted">เรียนวันที่ ' + esc(e.date) + (e.learned ? " · เรียนสดแล้ว" : "") + "</div></div></div>" +
+          '<div class="actions">' + acts + "</div></div>";
+      }).join("");
+
+      document.getElementById("view").innerHTML = html;
+      save();
+    }
+
+    document.addEventListener("click", function (ev) {
+      var t = ev.target.closest("[data-course],[data-open],[data-mark]");
+      if (!t) return;
+      var c = COURSES.filter(function (x) { return x.id === state.current; })[0];
+      if (t.dataset.course) { state.current = t.dataset.course; }
+      else if (t.dataset.open) { kid(c.id).opened[t.dataset.open] = Date.now(); }  // ลิงก์เปิดต่อเอง ไม่ preventDefault
+      else if (t.dataset.mark) {
+        var ep = c.episodes.filter(function (e) { return String(e.no) === t.dataset.mark; })[0];
+        kid(c.id).done[ep.no] = !isDone(c, ep);
+      }
+      render();
+    });
+
+    document.getElementById("reset").addEventListener("click", function () {
+      if (confirm("ล้างการติ๊กดูจบ/เปิดล่าสุด ของคนนี้ทั้งหมด?")) {
+        state.kids[state.current] = { done: {}, opened: {} };
+        render();
+      }
+    });
+
+    render();
+  </script>
+</body>
+</html>
