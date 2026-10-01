@@ -14,6 +14,9 @@
   var SK = window.Blocky;
   var HEROES = SK.SKINS;
   function heroImg(id, px) { return '<img class="av" src="' + SK.img(id, px * 2) + '" width="' + px + '" height="' + px + '" alt="">'; }
+  // ตัวละคร + ของที่ใส่อยู่ของลูกคนนั้น
+  function lookObj(kid, over) { var l = {}, b = K(kid).look; for (var x in b) l[x] = b[x]; if (over) for (var y in over) l[y] = over[y]; return SK.compose(l); }
+  function lookImg(kid, px, over, back) { return '<img class="av" src="' + SK.img(lookObj(kid, over), px * 2, back ? { back: true } : null) + '" width="' + px + '" height="' + px + '" alt="">'; }
   var DEFAULT_HERO = { Kaka: 'noob', Sheva: 'bacon' };
 
   // ---------- ธีมของแต่ละวิชา ----------
@@ -50,6 +53,9 @@
       k = S.kids[name] = { coins: 0, hero: DEFAULT_HERO[name] || 'noob', owned: [], stars: {}, wrong: {}, subj: {}, days: {}, gift: '' };
     }
     if (!SK.BY[k.hero]) k.hero = DEFAULT_HERO[name] || 'noob';   // เซฟเก่าที่เป็นอีโมจิ
+    k.look = k.look || { base: k.hero }; if (!SK.BY[k.look.base]) k.look.base = k.hero;
+    k.inv = (k.inv || []).filter(function (id) { return SK.IT[id]; });
+    for (var sl in k.look) if (sl !== 'base' && k.look[sl] && k.inv.indexOf(k.look[sl]) < 0) delete k.look[sl];
     k.owned = (k.owned || []).filter(function (id) { return SK.BY[id]; });
     return k;
   }
@@ -290,7 +296,7 @@
       '<p class="sub">' + esc(DATA.title || 'ทบทวนสอบ') + ' · วิ่งชนประตูคำตอบที่ถูก ถล่มบอส!</p><div class="kids">';
     names.forEach(function (n) {
       var info = kidInfo(n), k = K(n), ts = totalStars(n);
-      h += '<button class="kidcard" data-act="kid" data-kid="' + esc(n) + '"><div class="hero">' + heroImg(k.hero, 120) + '</div><b>' + esc(info.label || n) + '</b>' +
+      h += '<button class="kidcard" data-act="kid" data-kid="' + esc(n) + '"><div class="hero">' + lookImg(n, 130) + '</div><b>' + esc(info.label || n) + '</b>' +
         '<div class="meta">' + esc(info.grade || '') + '</div><div class="meta">💎 ' + k.coins + ' · ⭐ ' + ts.got + '/' + ts.max + '</div></button>';
     });
     h += '</div><div class="homefoot"><button class="btn small gray" data-act="parent">👨‍👩‍👧 สำหรับพ่อแม่</button>' +
@@ -302,7 +308,7 @@
   function topbar(title, back) {
     var k = K(cur.kid);
     return '<div class="topbar"><button class="iconbtn" data-act="back" data-to="' + back + '">⬅️</button><div class="title">' + title + '</div>' +
-      '<span class="pill">💎 ' + k.coins + '</span><button class="iconbtn" data-act="shop" title="ร้านค้า">🛒</button></div>';
+      '<span class="pill">💎 ' + k.coins + '</span><button class="iconbtn" data-act="shop" title="ห้องแต่งตัว">👕</button></div>';
   }
 
   function renderWorld() {
@@ -321,15 +327,15 @@
 
   function renderAdv() {
     var info = kidInfo(cur.kid), k = K(cur.kid), a = advState(k), nx = advPick(cur.kid), n = a.lv;
-    var h = topbar(heroImg(k.hero, 34) + ' ' + esc(info.label || cur.kid) + ' · ผจญภัย', 'home');
+    var h = topbar(lookImg(cur.kid, 34) + ' ' + esc(info.label || cur.kid) + ' · ผจญภัย', 'home');
     var sj = nx.boss ? null : subjByKey(cur.kid, nx.skey), th = theme(nx.boss ? 'mix' : nx.skey);
     var what = nx.boss ? '⚔️ <b>บอสใหญ่!</b> คละหลายวิชา' : sj.emoji + ' <b>' + esc(sj.name) + '</b> — ' + esc(sj.levels[nx.li].title);
     var toChest = 10 - ((n - 1) % 10) - 1;
     h += '<div class="adv"><div class="advcard" style="background:linear-gradient(160deg,' + th.c[0] + ',' + th.c[1] + ')">' +
-      '<div class="advhero">' + heroImg(k.hero, 130) + '<img class="av" width="120" height="120" src="' + bossImg(nx.boss ? 'mix' : nx.skey) + '"></div>' +
+      '<div class="advhero">' + lookImg(cur.kid, 150) + '<img class="av" width="120" height="120" src="' + bossImg(nx.boss ? 'mix' : nx.skey) + '"></div>' +
       '<div class="advn">ด่าน ' + n + '</div><div class="advwhat">' + what + '</div>' +
-      '<button class="btn green advgo" data-act="advplay">▶ ผจญภัยต่อ!</button>' +
-      '<div class="advsub">' + (toChest === 0 ? '🎁 ด่านนี้มีกล่องสมบัติ!' : '🎁 อีก ' + toChest + ' ด่านถึงกล่องสมบัติ') + '</div></div>';
+      '<div class="advbtns"><button class="btn green advgo" data-act="advplay">▶ ผจญภัยต่อ!</button><button class="btn advdress" data-act="shop">👕 แต่งตัว<small>' + k.inv.length + '/' + SK.ITEMS.length + ' ชิ้น</small></button></div>' +
+      '<div class="advsub">🎁 ผ่านด่าน = ได้ของแต่งตัว 1 ชิ้น · ' + (n % 5 === 0 ? '⚔️ ด่านบอสได้ของหายาก!' : toChest === 0 ? '💰 ด่านนี้ได้ของระดับตำนาน!' : 'อีก ' + toChest + ' ด่านถึงกล่องสมบัติ') + '</div></div>';
     // เส้นทาง: ด่านที่ผ่านมา 3 ด่าน → ด่านปัจจุบัน → ด่านข้างหน้า
     h += '<div class="trail">';
     for (var i = Math.max(1, n - 3); i <= n + 6; i++) {
@@ -398,15 +404,52 @@
   }
 
   function renderShop() {
-    var k = K(cur.kid);
-    var h = topbar('🛒 ร้านฮีโร่', cur.shopBack || 'world') + '<div class="shop">';
-    HEROES.forEach(function (x, i) {
-      var own = x.p === 0 || k.owned.indexOf(x.id) >= 0, on = k.hero === x.id;
-      h += '<div class="item' + (on ? ' on' : '') + '"><div class="em">' + heroImg(x.id, 110) + '</div><b>' + esc(x.n) + '</b>' +
-        (on ? '<span class="pill">✅ ใช้อยู่</span>' : own ? '<button class="btn small green" data-act="wear" data-i="' + i + '">ใช้ตัวนี้</button>' :
-          '<button class="btn small' + (k.coins >= x.p ? '' : ' gray') + '" data-act="buy" data-i="' + i + '">💎 ' + x.p + '</button>') + '</div>';
-    });
-    app.innerHTML = h + '</div>';
+    var k = K(cur.kid), tab = cur.tab || 'base', look = k.look;
+    var rcol = function (r) { return SK.RARITY[r].col; };
+    var h = topbar('👕 ห้องแต่งตัว', cur.shopBack || 'adv') + '<div class="closet"><div class="cprev">' +
+      '<div class="cfig">' + lookImg(cur.kid, 240, null, cur.backView) + '</div>' +
+      '<button class="btn small blue" data-act="turn">🔄 หมุนดู' + (cur.backView ? 'ด้านหน้า' : 'ด้านหลัง') + '</button>' +
+      '<div class="ccount">ของสะสม <b>' + k.inv.length + '</b> / ' + SK.ITEMS.length + ' ชิ้น</div>' +
+      '<div class="clegend">' + ['c', 'r', 'e', 'l'].map(function (r) { return '<span style="background:' + rcol(r) + '">' + SK.RARITY[r].n + '</span>'; }).join('') + '</div></div>' +
+      '<div class="cright"><div class="ctabs">' + SK.SLOTS.map(function (sl) {
+        var n = sl.k === 'base' ? '' : ' <small>' + SK.ITEMS.filter(function (it) { return it.slot === sl.k && k.inv.indexOf(it.id) >= 0; }).length + '/' + SK.ITEMS.filter(function (it) { return it.slot === sl.k; }).length + '</small>';
+        return '<button class="' + (tab === sl.k ? 'on' : '') + '" data-act="tab" data-tab="' + sl.k + '">' + sl.e + ' ' + sl.n + n + '</button>';
+      }).join('') + '</div><div class="cgrid">';
+    if (tab === 'base') {
+      HEROES.forEach(function (x, i) {
+        var own = x.p === 0 || k.owned.indexOf(x.id) >= 0, on = look.base === x.id;
+        h += '<div class="citem' + (on ? ' on' : '') + '">' + lookImg(cur.kid, 110, { base: x.id }) + '<b>' + esc(x.n) + '</b>' +
+          (on ? '<span class="pill">✅ ใช้อยู่</span>' : own ? '<button class="btn small green" data-act="wear" data-i="' + i + '">เลือกตัวนี้</button>' :
+            '<button class="btn small' + (k.coins >= x.p ? '' : ' gray') + '" data-act="buy" data-i="' + i + '">💎 ' + x.p + '</button>') + '</div>';
+      });
+    } else {
+      var none = !look[tab];
+      h += '<div class="citem' + (none ? ' on' : '') + '" data-act="equip" data-slot="' + tab + '" data-id="">' + lookImg(cur.kid, 110, (function () { var o = {}; o[tab] = null; return o; })()) + '<b>ไม่ใส่</b>' + (none ? '<span class="pill">✅</span>' : '') + '</div>';
+      SK.ITEMS.filter(function (it) { return it.slot === tab; }).forEach(function (it) {
+        var own = k.inv.indexOf(it.id) >= 0, on = look[tab] === it.id, o = {}; o[tab] = it.id;
+        if (own) h += '<div class="citem' + (on ? ' on' : '') + '" style="border-color:' + rcol(it.r) + '" data-act="equip" data-slot="' + tab + '" data-id="' + it.id + '">' + lookImg(cur.kid, 110, o, tab === 'back') +
+          '<b>' + esc(it.n) + '</b><span class="rar" style="background:' + rcol(it.r) + '">' + SK.RARITY[it.r].n + '</span>' + (on ? '<span class="pill">✅ ใส่อยู่</span>' : '') + '</div>';
+        else h += '<div class="citem locked" style="border-color:' + rcol(it.r) + '"><div class="lk">❓</div><b>???</b><span class="rar" style="background:' + rcol(it.r) + '">' + SK.RARITY[it.r].n + '</span><small>🔒 ผ่านด่านเพื่อสุ่มได้</small></div>';
+      });
+    }
+    app.innerHTML = h + '</div></div></div>';
+  }
+
+  // ---------- สุ่มของรางวัล ----------
+  var LOOT_W = { normal: { c: 70, r: 25, e: 5, l: 0 }, boss: { c: 0, r: 55, e: 37, l: 8 }, chest: { c: 0, r: 0, e: 45, l: 55 } };
+  function rollLoot(kid, tier) {
+    var k = K(kid), w = LOOT_W[tier] || LOOT_W.normal, pool = {}, tot = 0;
+    SK.ITEMS.forEach(function (it) { if (k.inv.indexOf(it.id) < 0) (pool[it.r] = pool[it.r] || []).push(it); });
+    var rs = Object.keys(pool);
+    if (!rs.length) return null;
+    var ws = rs.map(function (r) { return w[r] || 0; });
+    if (!ws.some(function (x) { return x > 0; })) ws = rs.map(function (r) { return { c: 1, r: 2, e: 3, l: 4 }[r]; });   // ระดับที่ตั้งไว้หมดแล้ว → ให้ระดับใกล้เคียง
+    ws.forEach(function (x) { tot += x; });
+    var r = Math.random() * tot, i = 0;
+    for (; i < ws.length - 1; i++) { r -= ws[i]; if (r <= 0) break; }
+    var it = pick(pool[rs[i]]);
+    k.inv.push(it.id); save();
+    return it;
   }
 
   // ---------- หน้าพ่อแม่ ----------
@@ -422,7 +465,7 @@
       var days = Object.keys(k.days).sort().slice(-7);
       var tq = 0, tok = 0; days.forEach(function (d) { tq += k.days[d].q; tok += k.days[d].ok; });
       var td = k.days[today()] || { sec: 0 };
-      h += '<div class="card"><h3>' + heroImg(k.hero, 30) + ' ' + esc(info.label || n) + ' ' + esc(info.grade || '') + '</h3><div class="kv">' +
+      h += '<div class="card"><h3>' + lookImg(n, 30) + ' ' + esc(info.label || n) + ' ' + esc(info.grade || '') + '</h3><div class="kv">' +
         '<div>เล่นวันนี้<b>' + Math.round(td.sec / 60) + ' นาที</b></div>' +
         '<div>ตอบ 7 วันล่าสุด<b>' + tq + ' ข้อ</b></div>' +
         '<div>ถูก (7 วัน)<b>' + (tq ? Math.round(100 * tok / tq) : 0) + '%</b></div>' +
@@ -473,17 +516,20 @@
     else if (act === 'practice') { go('world'); }
     else if (act === 'back') { go(t.getAttribute('data-to')); }
     else if (act === 'subj') { cur.subj = kidInfo(cur.kid).subjects[+t.getAttribute('data-i')]; go('levels'); }
-    else if (act === 'shop') { cur.shopBack = view === 'shop' ? cur.shopBack : view; go('shop'); }
+    else if (act === 'shop') { cur.shopBack = view === 'shop' ? cur.shopBack : view; if (view !== 'shop') cur.tab = 'base'; go('shop'); }
     else if (act === 'cards') { cur.cardLevel = +t.getAttribute('data-i'); go('cards'); }
     else if (act === 'locked') { modalMenu('<div class="big">🔒</div><h2>ยังเปิดไม่ได้</h2><p class="q">ผ่านด่านก่อนหน้าให้ได้อย่างน้อย ⭐ 1 ดวงก่อนนะ</p><div class="row"><button class="btn" data-close>โอเค</button></div>'); }
     else if (act === 'play') { var i = t.getAttribute('data-i'); startLevel(i === 'boss' ? 'boss' : +i); }
     else if (act === 'buy') {
       var x = HEROES[+t.getAttribute('data-i')], k = K(cur.kid);
       if (k.coins < x.p) { modalMenu('<div class="big">💎</div><h2>เพชรยังไม่พอ</h2><p class="q">ขาดอีก ' + (x.p - k.coins) + ' เพชร — ไปวิ่งเก็บเพิ่มกัน!</p><div class="row"><button class="btn" data-close>ไปวิ่ง!</button></div>'); return; }
-      k.coins -= x.p; k.owned.push(x.id); k.hero = x.id; save(); SFX.win(); renderShop();
-      modalMenu('<div class="big">' + heroImg(x.id, 170) + '</div><h2>ได้ ' + esc(x.n) + ' แล้ว!</h2><div class="row"><button class="btn green" data-close>เจ๋ง!</button></div>');
+      k.coins -= x.p; k.owned.push(x.id); k.hero = k.look.base = x.id; save(); SFX.win(); renderShop();
+      modalMenu('<div class="big">' + lookImg(cur.kid, 170) + '</div><h2>ได้ ' + esc(x.n) + ' แล้ว!</h2><div class="row"><button class="btn green" data-close>เจ๋ง!</button></div>');
     }
-    else if (act === 'wear') { K(cur.kid).hero = HEROES[+t.getAttribute('data-i')].id; save(); renderShop(); }
+    else if (act === 'wear') { var kw = K(cur.kid); kw.hero = kw.look.base = HEROES[+t.getAttribute('data-i')].id; save(); renderShop(); }
+    else if (act === 'tab') { cur.tab = t.getAttribute('data-tab'); renderShop(); }
+    else if (act === 'turn') { cur.backView = !cur.backView; renderShop(); }
+    else if (act === 'equip') { var ke = K(cur.kid), sl = t.getAttribute('data-slot'), id = t.getAttribute('data-id'); if (id) ke.look[sl] = id; else delete ke.look[sl]; save(); SFX.pop(); renderShop(); }
     else if (act === 'sound') { S.settings.sound = !S.settings.sound; save(); renderHome(); }
     else if (act === 'parent') { parentGate(function () { go('parent'); }); }
     else if (act === 'bonus') { K(t.getAttribute('data-kid')).coins += 50; save(); renderParent(); }
@@ -527,6 +573,7 @@
   function Game(kid, subj, li, adv) {
     var g = this;
     g.kid = kid; g.subj = subj; g.li = li; g.adv = adv || null; g.th = theme(subj.key); g.beg = beginner(kid);
+    g.look = lookObj(kid); g.shotE = g.look.hand ? g.look.hand.shot : '🔥';
     if (adv) g.lvTitle = 'ด่าน ' + adv.n + ' · ' + (adv.boss ? '⚔️ บอสใหญ่คละวิชา' : subj.emoji + ' ' + subj.name + ' — ' + subj.levels[li].title);
     else g.lvTitle = li === 'boss' ? '👑 บอสใหญ่' : 'ด่าน ' + (li + 1) + ' · ' + subj.levels[li].title;
     g.queue = adv && adv.boss ? buildMix(kid) : buildQueue(kid, subj, li, adv ? (beginner(kid) ? 6 : 8) : 0);
@@ -644,7 +691,7 @@
 
   Game.prototype.intro = function () {
     var g = this;
-    g.modal('<div class="big">' + heroImg(K(g.kid).hero, 110) + ' <span style="font-size:40px">⚔️</span> <img class="av" width="110" height="110" src="' + bossImg(g.subj.key) + '"></div><h2>' + esc(g.lvTitle) + '</h2>' +
+    g.modal('<div class="big">' + lookImg(g.kid, 120) + ' <span style="font-size:40px">⚔️</span> <img class="av" width="110" height="110" src="' + bossImg(g.subj.key) + '"></div><h2>' + esc(g.lvTitle) + '</h2>' +
       '<p class="q">' + esc(g.th.bossName) + ' มาแล้ว!<br>วิ่งเข้า <b>ประตูคำตอบที่ถูก</b> เพื่อยิงบอส 🔥</p>' +
       '<p class="ex">⏸ เกมจะ<b>หยุดรอ</b>ให้เลือกคำตอบ ไม่ต้องรีบ · 👆 แตะการ์ดคำตอบ (หรือแตะประตู)<br>✅ ตอบถูก = ตัวใหญ่ขึ้น 💪 · ❌ ตอบผิด = ตัวเล็กลง · ⤴️ = กระโดดข้ามสิ่งกีดขวาง' + (g.queue.some(function (x) { return x.kind === 'blast'; }) ? '<br>🎯 ด่านฟอง: แตะเฉพาะฟองที่ตรงกติกา' : '') + '</p>' +
       '<div class="row"><button class="btn green" data-m="go">▶ เริ่มเลย!</button></div>', function (a) {
@@ -959,9 +1006,16 @@
       a.lv = n + 1; a.cur = null; a.best = Math.max(a.best || 0, n);
       if (n % 10 === 0) { chest = 100; bonus += chest; }
     }
+    // ของรางวัล: ผจญภัยได้ทุกด่านที่ชนะ · ฝึกรายวิชาได้เมื่อได้ดาวด่านนั้นครั้งแรก (เล่นซ้ำมีลุ้น 35%)
+    var loot = null, lootGem = 0;
+    if (won) {
+      var tier = g.adv ? (g.adv.n % 10 === 0 ? 'chest' : g.adv.boss ? 'boss' : 'normal') : (g.li === 'boss' ? 'boss' : 'normal');
+      if (g.adv || prev === 0 || g.li === 'boss' || Math.random() < 0.35) { loot = rollLoot(g.kid, tier); if (!loot) { lootGem = 30; bonus += 30; } }
+    }
     k.coins += g.coins + bonus;
     g.recordTime(); save();
     if (won) SFX.win();
+    var lootHtml = loot ? '<div class="loot" style="--rc:' + SK.RARITY[loot.r].col + '"><div class="lbox">🎁</div></div>' : lootGem ? '<p class="q">🎉 สะสมของครบทุกชิ้นแล้ว! รับ 💎 +30 แทน</p>' : '';
     var miss = '';
     var seen = {};
     g.missed = g.missed.filter(function (m) { var k = m.q + '|' + m.a; if (seen[k]) return false; seen[k] = 1; return true; });
@@ -975,11 +1029,11 @@
       if (levelUnlocked(g.subj, ni)) nextBtn = '<button class="btn green" data-m="next" data-n="' + ni + '">ด่านต่อไป ▶</button>';
     }
     var html = won
-      ? '<div class="big">' + heroImg(k.hero, Math.round(80 + 50 * Math.min(g.player.scale, 1.6))) + '</div><h2>🏆 ชนะ ' + esc(g.th.bossName) + '!</h2><div class="stars">' + [0, 1, 2].map(function (i) { return '<span style="animation-delay:' + (0.2 + i * 0.25) + 's">' + (i < stars ? '⭐' : '☆') + '</span>'; }).join('') + '</div>' +
+      ? '<div class="big">' + lookImg(g.kid, loot ? 80 : Math.round(80 + 50 * Math.min(g.player.scale, 1.6))) + '</div><h2>🏆 ชนะ ' + esc(g.th.bossName) + '!</h2><div class="stars">' + [0, 1, 2].map(function (i) { return '<span style="animation-delay:' + (0.2 + i * 0.25) + 's">' + (i < stars ? '⭐' : '☆') + '</span>'; }).join('') + '</div>' +
         (chest ? '<p class="q" style="font-size:26px">🎁 เปิดกล่องสมบัติ! 💎 +' + chest + '</p>' : '') + '<p class="q">ตอบถูก ' + g.okN + ' ข้อ · 💎 +' + (g.coins + bonus) + '</p><p class="ex">💪 ตัวใหญ่ x' + g.player.scale.toFixed(1) + (sizeB ? ' → โบนัส 💎 +' + sizeB : '') + '</p>' + (stars < 3 ? '<p class="ex">ตอบถูกหมดไม่พลาดเลย = ⭐⭐⭐</p>' : '<p class="ex">เพอร์เฟกต์! ไม่พลาดสักข้อ 🎉</p>')
       : '<div class="big">💔</div><h2>หัวใจหมดแล้ว</h2><p class="q">ไม่เป็นไร! อ่านข้อที่พลาดแล้วลองใหม่นะ<br>💎 เก็บได้ ' + g.coins + ' เพชร</p>';
     var againBtn = g.adv ? (won ? '' : '<button class="btn" data-m="advagain">🔁 ลองใหม่</button>') : '<button class="btn" data-m="again">🔁 เล่นอีก</button>';
-    var m = g.modal(html + miss + '<div class="row"><button class="btn gray" data-m="map">🗺️ แผนที่</button>' + againBtn + nextBtn + '</div>', function (a) {
+    var m = g.modal(html + lootHtml + miss + '<div class="row"><button class="btn gray" data-m="map">🗺️ แผนที่</button>' + againBtn + nextBtn + '</div>', function (a) {
       var kid = g.kid, subj = g.subj, li = g.li;
       g.quit();
       if (a === 'advnext' || a === 'advagain') { startAdv(); }
@@ -987,6 +1041,22 @@
       else if (a === 'next') { startLevel(li + 1 < subj.levels.length ? li + 1 : 'boss'); }
     });
     g.state = 'done';
+    if (loot) {
+      var lb = m.querySelector('.loot');
+      setTimeout(function () {   // กล่องสั่น แล้วเปิดออก
+        SFX.win();
+        var o = {}; o[loot.slot] = loot.id;
+        lb.classList.add('open');
+        lb.innerHTML = '<div class="lnew">✨ ได้ของใหม่! ✨</div><div class="lfig">' + lookImg(g.kid, 120, o) + '</div>' +
+          '<div class="lname">' + esc(loot.n) + '</div><span class="rar" style="background:' + SK.RARITY[loot.r].col + '">' + SK.RARITY[loot.r].n + '</span> ' +
+          '<button class="btn small green" data-loot="1">👕 ใส่เลย!</button>';
+        lb.querySelector('[data-loot]').onclick = function () {
+          K(g.kid).look[loot.slot] = loot.id; save(); SFX.pop();
+          this.textContent = '✅ ใส่แล้ว'; this.disabled = true;
+          var big = m.querySelector('.panel > .big'); if (big) big.innerHTML = lookImg(g.kid, 130);
+        };
+      }, 1100);
+    }
   };
 
   // ---------- เอฟเฟกต์ ----------
@@ -1151,7 +1221,7 @@
     g.shots.forEach(function (s) {
       var bx = W / 2, by = g.horizon - g.bossSize() * 0.55, t = s.t;
       var x = s.x + (bx - s.x) * t, y = s.y + (by - s.y) * t - Math.sin(t * Math.PI) * 80;
-      c.font = (s.big ? 70 : 46) * (1 - t * 0.5) + 'px ' + FONT; c.fillText(s.big ? '☄️' : '🔥', x, y);
+      c.font = (s.big ? 70 : 46) * (1 - t * 0.5) + 'px ' + FONT; c.fillText(s.big ? '☄️' : g.shotE, x, y);
     });
 
     // ฟองสบู่
@@ -1260,7 +1330,7 @@
     c.save(); c.translate(x, foot); c.rotate((p.lane - p.x) * -0.25); c.translate(-x, -foot);
     if (p.stun > 0 && Math.floor(g.t * 12) % 2) c.globalAlpha = 0.4;
     if (g.state === 'ask' || (g.gate && g.gate.z < 9)) c.globalAlpha = 0.55;   // โปร่งให้เห็นประตู
-    SK.draw(c, K(g.kid).hero, x, foot, h, { back: true, run: runningNow ? p.run : null });
+    SK.draw(c, g.look, x, foot, h, { back: true, run: runningNow ? p.run : null });
     c.restore(); c.globalAlpha = 1;
     c.textAlign = 'center'; c.textBaseline = 'middle';
     if (g.combo >= 3 && g.state === 'run') { c.font = 'bold 22px ' + FONT; c.fillStyle = '#f97316'; c.fillText('🔥 x' + g.combo, x, foot - h - 16); }
