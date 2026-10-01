@@ -406,7 +406,7 @@
   function topbar(title, back) {
     var k = K(cur.kid);
     return '<div class="topbar"><button class="iconbtn" data-act="back" data-to="' + back + '">⬅️</button><div class="title">' + title + '</div>' +
-      '<span class="pill">💎 ' + k.coins + '</span><button class="iconbtn" data-act="shop" title="ห้องแต่งตัว">👕</button></div>';
+      cloudBtn() + '<span class="pill">💎 ' + k.coins + '</span><button class="iconbtn" data-act="shop" title="ห้องแต่งตัว">👕</button></div>';
   }
 
   function renderWorld() {
@@ -558,6 +558,11 @@
       ' <small>(ครบเวลาแล้วเกมให้พักสายตา · ด่านที่เล่นอยู่เล่นจนจบได้)</small></p>' +
       '<p><label><input type="checkbox" data-set="voice"' + (S.settings.voice ? ' checked' : '') + '> อ่านโจทย์ออกเสียง</label> &nbsp; ' +
       '<label><input type="checkbox" data-set="sound"' + (S.settings.sound ? ' checked' : '') + '> เสียงประกอบ</label></p></div>' +
+      '<div class="card"><h3>☁️ ซิงก์ Google Drive</h3>' + (S.settings.drive
+        ? '<p>✅ เปิดอยู่ · บัญชี kakasheva.platon · โฟลเดอร์ “' + DRIVE_FOLDER + '” · ' + (S.settings.driveLast ? 'ซิงก์ล่าสุด ' + new Date(S.settings.driveLast).toLocaleString('th-TH') : 'ยังไม่เคยซิงก์') + (drive.msg ? ' · ' + esc(drive.msg) : '') + '</p>' +
+          '<p class="ex" style="font-size:15px">ซิงก์เองตอนลูกแตะชื่อ และทุกครั้งที่จบด่าน · ข้อมูลทั้ง 2 คนรวมกันแบบของไม่หาย · ถ้ามีหน้าต่าง Google เด้ง ให้เลือกบัญชี kakasheva.platon</p>' +
+          '<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn small blue" data-act="drivenow">🔄 ซิงก์ตอนนี้</button><button class="btn small gray" data-act="driveoff">ปิดการซิงก์</button></div>'
+        : '<p>ยังไม่เปิด · เปิดแล้ว save ของลูกจะเก็บใน Google Drive (บัญชี kakasheva.platon) และใช้ข้าม iPad ได้</p><button class="btn small green" data-act="driveon">☁️ เชื่อม Google Drive</button>') + '</div>' +
       '<div class="card"><h3>💾 สำรอง / ย้าย save</h3><p>save เก็บอยู่ในเครื่องนี้ · กด <b>สำรอง</b> แล้วเลือก “บันทึกไปยังไฟล์” หรือ Google Drive · เปลี่ยนเครื่อง/save หาย → <b>นำเข้า</b> ไฟล์นั้น (ของในเครื่องไม่หาย — รวมกันให้)</p>' +
       '<div class="row" style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn small blue" data-act="backup">💾 สำรอง save</button>' +
       '<button class="btn small green" data-act="restore">📥 นำเข้า save</button><input type="file" id="restoreFile" accept=".json,application/json" style="display:none"></div></div>';
@@ -624,6 +629,127 @@
     rd.readAsText(f);
   }
 
+  // =====================================================================
+  //  ☁️ ซิงก์ Google Drive (เฟส 3 ของ _context/แผนเกม-v2-…md)
+  //  บัญชี kakasheva.platon · scope drive.file · โฟลเดอร์ "ฮีโร่ตะลุยสอบ-save" · ไฟล์ save-<ชื่อลูก>.json
+  //  เก็บในเครื่องเป็นหลัก → ดึงมารวม (mergeKid) แล้วส่งขึ้น · token อายุ ~1 ชม. เก็บแยกใน localStorage "ksl_drive_tok" (ไม่อยู่ในไฟล์สำรอง)
+  // =====================================================================
+  var DRIVE_CLIENT = '576999872813-ro8i8nscem03slml0fm37jstge6phboq.apps.googleusercontent.com';
+  var DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+  var DRIVE_FOLDER = 'ฮีโร่ตะลุยสอบ-save';
+  var TOK_KEY = 'ksl_drive_tok';
+  var drive = { busy: false, state: '', msg: '', folderId: null, fileIds: {} };
+  function tok() { try { var t = JSON.parse(localStorage.getItem(TOK_KEY)); return t && t.exp > Date.now() + 60000 ? t.t : null; } catch (e) { return null; } }
+  function loadGis(cb) {
+    if (window.google && google.accounts && google.accounts.oauth2) return cb(true);
+    var sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true;
+    sc.onload = function () { cb(true); }; sc.onerror = function () { cb(false); };
+    document.head.appendChild(sc);
+  }
+  // ต้องเรียกจากการแตะของผู้ใช้ (iPad บล็อกหน้าต่างล็อกอินถ้าไม่ได้แตะ)
+  function driveLogin(consent, cb) {
+    loadGis(function (ok) {
+      if (!ok) { setCloud('err', 'ต่อเน็ตไม่ได้'); return cb && cb(false); }
+      var tc = google.accounts.oauth2.initTokenClient({
+        client_id: DRIVE_CLIENT, scope: DRIVE_SCOPE, hint: 'kakasheva.platon@gmail.com',
+        callback: function (r) {
+          if (r.error) { setCloud('err', 'ล็อกอินไม่สำเร็จ'); return cb && cb(false); }
+          localStorage.setItem(TOK_KEY, JSON.stringify({ t: r.access_token, exp: Date.now() + (r.expires_in || 3600) * 1000 }));
+          cb && cb(true);
+        },
+        error_callback: function () { setCloud('err', 'หน้าต่างล็อกอินถูกปิด'); cb && cb(false); }
+      });
+      tc.requestAccessToken(consent ? { prompt: 'consent' } : { prompt: '' });
+    });
+  }
+  function dapi(method, url, body, headers) {
+    var t = tok(); if (!t) return Promise.reject(new Error('notoken'));
+    return fetch(url, { method: method, headers: Object.assign({ Authorization: 'Bearer ' + t }, headers || {}), body: body })
+      .then(function (r) { return r.text().then(function (x) { if (r.status === 401) localStorage.removeItem(TOK_KEY); if (!r.ok) throw new Error(r.status + ' ' + x.slice(0, 120)); return x ? JSON.parse(x) : {}; }); });
+  }
+  function dq(q) { return dapi('GET', 'https://www.googleapis.com/drive/v3/files?q=' + encodeURIComponent(q) + '&fields=files(id,name)&spaces=drive'); }
+  function driveFolder() {
+    if (drive.folderId) return Promise.resolve(drive.folderId);
+    return dq("name='" + DRIVE_FOLDER + "' and mimeType='application/vnd.google-apps.folder' and trashed=false").then(function (r) {
+      if (r.files && r.files.length) return (drive.folderId = r.files[0].id);
+      return dapi('POST', 'https://www.googleapis.com/drive/v3/files', JSON.stringify({ name: DRIVE_FOLDER, mimeType: 'application/vnd.google-apps.folder' }), { 'Content-Type': 'application/json' }).then(function (f) { return (drive.folderId = f.id); });
+    });
+  }
+  function driveFileId(kid) {
+    if (drive.fileIds[kid]) return Promise.resolve(drive.fileIds[kid]);
+    return driveFolder().then(function (fid) { return dq("name='save-" + kid + ".json' and '" + fid + "' in parents and trashed=false"); })
+      .then(function (r) { var id = r.files && r.files[0] && r.files[0].id; if (id) drive.fileIds[kid] = id; return id || null; });
+  }
+  // io จริง (Drive) — หน้าเทสต์ใช้ io จำลองแทนได้
+  var driveIO = {
+    read: function (kid) {
+      return driveFileId(kid).then(function (id) { return id ? dapi('GET', 'https://www.googleapis.com/drive/v3/files/' + id + '?alt=media') : null; });
+    },
+    write: function (kid, obj) {
+      return driveFileId(kid).then(function (id) {
+        return driveFolder().then(function (fid) {
+          var meta = id ? {} : { name: 'save-' + kid + '.json', parents: [fid], mimeType: 'application/json' }, bd = 'ksl' + Date.now();
+          var body = '--' + bd + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) + '\r\n--' + bd + '\r\nContent-Type: application/json\r\n\r\n' + JSON.stringify(obj) + '\r\n--' + bd + '--';
+          var url = 'https://www.googleapis.com/upload/drive/v3/files' + (id ? '/' + id : '') + '?uploadType=multipart';
+          return dapi(id ? 'PATCH' : 'POST', url, body, { 'Content-Type': 'multipart/related; boundary=' + bd }).then(function (f) { if (f.id) drive.fileIds[kid] = f.id; });
+        });
+      });
+    }
+  };
+  // ซิงก์ลูก 1 คน: ดึง → รวม → (ถ้าต่างจากบน Drive) ส่งขึ้น
+  function syncKid(kid, io) {
+    return io.read(kid).then(function (remote) {
+      var rk = null;
+      if (remote && remote.app === 'ksl-arcade' && remote.data) { var w = { kids: {} }; w.kids[kid] = remote.data; w.v = remote.v; rk = migrate(w).kids[kid]; }
+      var local = S.kids[kid] ? JSON.parse(JSON.stringify(S.kids[kid])) : null;
+      if (!local && !rk) return 'empty';
+      var merged = mergeKid(local, rk);
+      var changedLocal = !local || snapOf(merged) !== snapOf(local);
+      if (changedLocal) { S.kids[kid] = merged; save(); }
+      var mine = JSON.parse(JSON.stringify(S.kids[kid]));
+      if (!rk || snapOf(mine) !== snapOf(rk)) return io.write(kid, { app: 'ksl-arcade', v: SAVE_V, season: SEASON, kid: kid, savedAt: new Date().toISOString(), data: mine }).then(function () { return changedLocal ? 'both' : 'up'; });
+      return changedLocal ? 'down' : 'same';
+    });
+  }
+  function syncAll(io) {
+    var names = Object.keys(DATA.kids).filter(function (n) { return S.kids[n]; });
+    var all = {}; Object.keys(DATA.kids).forEach(function (n) { all[n] = 1; });
+    Object.keys(S.kids).forEach(function (n) { all[n] = 1; });
+    names = Object.keys(all);
+    var res = {}, ch = Promise.resolve();
+    names.forEach(function (n) { ch = ch.then(function () { return syncKid(n, io).then(function (r) { res[n] = r; }); }); });
+    return ch.then(function () { return res; });
+  }
+  // เรียกได้ทุกจังหวะ: มี token → ซิงก์เงียบ ๆ · ไม่มี token + มาจากการแตะ → ขอ token ก่อน
+  function driveSync(fromTap, done) {
+    if (!S.settings.drive || drive.busy || G) { if (done) done(); return; }
+    if (!tok()) {
+      if (!fromTap) { setCloud('need', 'แตะ ☁️ เพื่อซิงก์'); if (done) done(); return; }
+      return driveLogin(false, function (ok) { if (ok) driveSync(false, done); else if (done) done(); });
+    }
+    drive.busy = true; setCloud('busy', 'กำลังซิงก์…');
+    syncAll(driveIO).then(function (res) {
+      drive.busy = false; S.settings.driveLast = Date.now(); save();
+      setCloud('ok', 'ซิงก์แล้ว ' + new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }));
+      var pulled = Object.keys(res).some(function (n) { return res[n] === 'down' || res[n] === 'both'; });
+      if (pulled && !G && !menuModal) render();
+      if (done) done(res);
+    }).catch(function (e) {
+      drive.busy = false; drive.folderId = null; drive.fileIds = {};
+      setCloud(String(e.message).indexOf('notoken') >= 0 || String(e.message).indexOf('401') === 0 ? 'need' : 'err', 'ซิงก์ไม่สำเร็จ');
+      if (done) done(null, e);
+    });
+  }
+  function setCloud(st, msg) {
+    drive.state = st; drive.msg = msg;
+    var el = document.querySelector('.cloud');
+    if (el) { el.className = 'cloud ' + st; el.textContent = { ok: '☁️✅', busy: '☁️🔄', err: '☁️⚠️', need: '☁️👆' }[st] || '☁️'; el.title = msg; }
+  }
+  function cloudBtn() {
+    if (!S.settings.drive) return '';
+    return '<button class="iconbtn cloud ' + drive.state + '" data-act="cloud" title="' + esc(drive.msg) + '">' + ({ ok: '☁️✅', busy: '☁️🔄', err: '☁️⚠️', need: '☁️👆' }[drive.state] || '☁️') + '</button>';
+  }
+
   // ---------- modal บนหน้าเมนู ----------
   var menuModal = null;
   function modalMenu(html, onClose) {
@@ -639,7 +765,11 @@
   app.addEventListener('click', function (e) {
     var t = e.target.closest('[data-act]'); if (!t) return;
     var act = t.getAttribute('data-act'); audio(); SFX.click();
-    if (act === 'kid') { cur.kid = t.getAttribute('data-kid'); go('adv'); }
+    if (act === 'kid') { cur.kid = t.getAttribute('data-kid'); go('adv'); driveSync(true); }
+    else if (act === 'cloud') { driveSync(true, function (res, err) { if (err) modalMenu('<div class="big">☁️⚠️</div><h2>ซิงก์ไม่สำเร็จ</h2><p class="q">' + esc(err.message) + '</p><p class="ex">ลองใหม่อีกครั้ง หรือเช็กอินเทอร์เน็ต</p><div class="row"><button class="btn" data-close>ตกลง</button></div>'); }); }
+    else if (act === 'driveon') { S.settings.drive = true; save(); driveLogin(true, function (ok) { if (ok) driveSync(false, function () { renderParent(); }); else renderParent(); }); }
+    else if (act === 'driveoff') { S.settings.drive = false; localStorage.removeItem(TOK_KEY); save(); renderParent(); }
+    else if (act === 'drivenow') { driveSync(true, function () { renderParent(); }); }
     else if (act === 'advplay') { startAdv(); }
     else if (act === 'practice') { go('world'); }
     else if (act === 'back') { go(t.getAttribute('data-to')); }
@@ -860,6 +990,7 @@
     cancelAnimationFrame(g.raf); window.removeEventListener('resize', g.resize); window.removeEventListener('keydown', g.onKey);
     document.removeEventListener('visibilitychange', g.onVis);
     hush(); g.el.remove(); G = null; save(); render();
+    setTimeout(function () { driveSync(false); }, 300);
   };
   Game.prototype.recordTime = function () {
     var g = this, sec = Math.round((Date.now() - g.startT) / 1000) - g.playSec;
@@ -1491,7 +1622,10 @@
   }
 
   // ช่องทางให้หน้าเทสต์ (tools/test-arcade.html) เข้าถึงเกมที่กำลังเล่น
-  window.__arcade = { game: function () { return G; }, S: function () { return S; }, save: save, mergeKid: mergeKid, exportObj: exportObj, importObj: importObj, migrate: migrate, K: K };
+  // โหลดสคริปต์ Google ไว้ก่อน — ตอนลูกแตะชื่อจะเปิดหน้าต่างล็อกอินได้ทันที (iPad บล็อกถ้าเปิดช้ากว่าการแตะ)
+  if (S.settings.drive) loadGis(function () {});
+  setTimeout(function () { if (S.settings.drive) driveSync(false); }, 800);
+  window.__arcade = { syncAll: syncAll, syncKid: syncKid, game: function () { return G; }, S: function () { return S; }, save: save, mergeKid: mergeKid, exportObj: exportObj, importObj: importObj, migrate: migrate, K: K };
 
   // ---------- เริ่ม ----------
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { if (!G) render(); });

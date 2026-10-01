@@ -233,3 +233,8 @@ img.av { vertical-align: middle; image-rendering: auto; }
 .loot .lbox { font-size: 70px; }
 .loot { padding: 8px 12px; margin: 6px auto; }
 .panel .stars { font-size: 48px; }
+
+/* ---------- ปุ่มเมฆซิงก์ ---------- */
+.iconbtn.cloud { width: auto; padding: 0 10px; font-size: 20px; }
+.iconbtn.cloud.busy { animation: pulse 1s ease-in-out infinite; }
+.iconbtn.cloud.need, .iconbtn.cloud.err { background: #fef3c7; }
