@@ -474,7 +474,7 @@
       h += '<div class="node' + (open ? '' : ' locked') + '">' +
         '<button class="ic" style="background:linear-gradient(160deg,' + th.c[0] + ',' + th.c[1] + ')" data-act="' + (open ? 'play' : 'locked') + '" data-i="' + i + '">' + (open ? (lv.emoji || '⭐') : '🔒') + '</button>' +
         '<button class="tx" style="background:none;text-align:left;color:inherit" data-act="' + (open ? 'play' : 'locked') + '" data-i="' + i + '"><b>ด่าน ' + (i + 1) + ' · ' + esc(lv.title) + '</b>' +
-        '<small>' + (lv.sort && lv.sort.length ? '🏃 วิ่ง + 🎯 ยิงฟอง' : '🏃 วิ่งตอบคำถาม') + '</small></button>' +
+        '<small>🎮 เลือกเกม: 🏃 วิ่ง · 🧗 ปีนหอคอย' + (canCards(cur.kid, s, i) ? ' · 🃏 การ์ด' : '') + '</small></button>' +
         '<span class="stars">' + starStr(st) + '</span>' +
         '<button class="cards" data-act="cards" data-i="' + i + '">📚 ทบทวน</button></div>';
     });
@@ -820,13 +820,69 @@
   }
   function startLevel(li) {
     if (timeUp()) return;
-    G = new Game(cur.kid, cur.subj, li);
+    var subj = cur.subj;
+    pickMode(subj, li, null, function (m, x2) { launch(m, cur.kid, subj, li, null, x2); });
   }
   function startAdv() {
     if (timeUp()) return;
     var nx = advPick(cur.kid);
-    if (nx.boss) G = new Game(cur.kid, MIX, 'mix', nx);
-    else G = new Game(cur.kid, subjByKey(cur.kid, nx.skey), nx.li, nx);
+    if (nx.boss) launch('boss', cur.kid, MIX, 'mix', nx);
+    else { var sj = subjByKey(cur.kid, nx.skey); pickMode(sj, nx.li, nx, function (m, x2) { launch(m, cur.kid, sj, nx.li, nx, x2); }); }
+  }
+  function launch(m, kid, subj, li, adv, x2) {
+    var k = K(kid); k.modes = k.modes || {}; k.modes[m] = Date.now(); save();
+    G = m === 'run' ? new Game(kid, subj, li, adv) : new Mini(m, kid, subj, li, adv);
+    G.coinMul = x2 ? 2 : 1;
+  }
+
+  // ---------- 🎮 ลูกเลือกเกมเองทุกด่าน (ด่านบอส = ⚔️ ตีบอส ตายตัว) ----------
+  var MODES = {
+    run: { e: '🏃', n: 'วิ่งชนประตู', d: 'วิ่ง 3 เลน เลือกประตูคำตอบ' },
+    tower: { e: '🧗', n: 'ปีนหอคอย', d: 'ถูกปีนขึ้น ผิดตก 1 ขั้น' },
+    cards: { e: '🃏', n: 'จับคู่การ์ด', d: 'จำแล้วเปิดหาคู่ที่ถูกกัน' },
+    boss: { e: '⚔️', n: 'ตีบอส', d: 'ตอบถูกฟันบอส' }
+  };
+  function pickMode(subj, li, adv, start) {
+    if (li === 'boss' || li === 'mix') return start('boss');
+    var k = K(cur.kid); k.modes = k.modes || {};
+    var opts = ['run', 'tower']; if (canCards(cur.kid, subj, li)) opts.push('cards');
+    // เกมที่ไม่ได้เล่นนานสุด (เกิน 20 ชม./ยังไม่เคย) ได้เพชร ×2 — ชวนให้ลองหลายแบบ
+    var x2 = null;
+    opts.forEach(function (m) { var t = k.modes[m] || 0; if (Date.now() - t > 20 * 3600 * 1000 && (x2 === null || t < (k.modes[x2] || 0))) x2 = m; });
+    var el = document.createElement('div'); el.className = 'modal'; el.style.position = 'fixed'; el.style.zIndex = 50;
+    el.innerHTML = '<div class="panel"><h2>🎮 เลือกเกม</h2><p class="q">' + (adv ? 'ด่าน ' + adv.n + ' · ' : '') + subj.emoji + ' ' + esc(subj.name) + ' — ' + esc(subj.levels[li].title) + '</p><div class="modes">' +
+      ['run', 'tower', 'cards'].map(function (m) {
+        var M = MODES[m], on = opts.indexOf(m) >= 0;
+        return '<button class="mode' + (on ? '' : ' off') + '" data-mode="' + m + '"' + (on ? '' : ' disabled') + '><span class="me">' + M.e + '</span><b>' + M.n + '</b><small>' + (on ? M.d : 'ด่านนี้ยังไม่มีการ์ด') + '</small>' + (m === x2 ? '<span class="x2">💎×2</span>' : '') + '</button>';
+      }).join('') + '</div><div class="row"><button class="btn gray small" data-mode="x">ยกเลิก</button></div></div>';
+    el.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-mode]'); if (!b || b.disabled) return;
+      var m = b.getAttribute('data-mode'); el.remove(); if (menuModal === el) menuModal = null; audio(); SFX.click();
+      if (m !== 'x') start(m, m === x2);
+    });
+    closeModal(); document.body.appendChild(el); menuModal = el;
+  }
+  // คู่สำหรับเกมการ์ด: จาก pairs ของด่าน + โจทย์เลขสุ่ม ("7 × 3" ↔ "21")
+  function pairPool(subj, li) {
+    var lv = subj.levels[li], out = [];
+    if (!lv) return out;
+    (lv.pairs || []).forEach(function (pr) { out.push({ a: pr[0], b: pr[1] }); });
+    var gens = (lv.gen || []).filter(function (gg) { return gg.type !== 'compare' && gg.type !== 'tens'; });
+    for (var i = 0; gens.length && i < 10; i++) { var q = genQ(pick(gens), subj.lang); if (q) out.push({ a: q.q.replace(/\s*=\s*\?\s*$/, ''), b: q.c[0] }); }
+    return out;
+  }
+  function cardsNeed(kid) { return beginner(kid) ? 4 : 6; }   // คู่ต่อกระดาน (ด่านที่คู่ไม่พอ Kaka ลดเหลือขั้นต่ำ 4)
+  var CARDS_MIN = 4;
+  function canCards(kid, subj, li) { return boardFrom(pairPool(subj, li), cardsNeed(kid)).length >= CARDS_MIN; }
+  // ไม่ให้มีข้อความซ้ำบนกระดานเดียว (กันจับคู่ได้หลายแบบ)
+  function boardFrom(pool, n) {
+    var best = [];
+    for (var t = 0; t < 20 && best.length < n; t++) {   // สุ่มหลายครั้ง เอากระดานที่ได้คู่มากสุด
+      var used = {}, out = [];
+      shuffle(pool).forEach(function (pr) { if (out.length >= n || used[pr.a] || used[pr.b]) return; used[pr.a] = used[pr.b] = 1; out.push(pr); });
+      if (out.length > best.length) best = out;
+    }
+    return best;
   }
 
   var Z_NEAR = 3, FAR = 70, STOP_Z = 6;
@@ -1255,6 +1311,7 @@
   };
   Game.prototype.results = function (won) {
     var g = this, k = K(g.kid), key = g.subj.key + ':' + g.li;
+    if (g.coinMul > 1 && !g.mulDone) { g.coins *= g.coinMul; g.mulDone = true; }
     var stars = !won ? 0 : g.mist === 0 ? 3 : g.mist <= 2 ? 2 : 1;
     var sizeB = won ? Math.max(0, Math.round((g.player.scale - 1) * 150)) : 0;
     var prev = g.subj.key === 'mix' ? 3 : (k.stars[key] || 0), bonus = won ? stars * 10 + (stars > prev ? 20 : 0) + sizeB : 0;
@@ -1291,7 +1348,7 @@
       if (levelUnlocked(g.subj, ni)) nextBtn = '<button class="btn green" data-m="next" data-n="' + ni + '">ด่านต่อไป ▶</button>';
     }
     var html = won
-      ? '<div class="big">' + lookImg(g.kid, loot ? 80 : Math.round(80 + 50 * Math.min(g.player.scale, 1.6))) + '</div><h2>🏆 ชนะ ' + esc(g.th.bossName) + '!</h2><div class="stars">' + [0, 1, 2].map(function (i) { return '<span style="animation-delay:' + (0.2 + i * 0.25) + 's">' + (i < stars ? '⭐' : '☆') + '</span>'; }).join('') + '</div>' +
+      ? '<div class="big">' + lookImg(g.kid, loot ? 80 : Math.round(80 + 50 * Math.min(g.player.scale, 1.6))) + '</div><h2>' + (g.mode === 'tower' ? '🏆 ปีนถึงยอดแล้ว!' : g.mode === 'cards' ? '🏆 จับคู่ครบแล้ว!' : '🏆 ชนะ ' + esc(g.th.bossName) + '!') + (g.coinMul > 1 ? ' <small style="color:#db2777">💎×2</small>' : '') + '</h2><div class="stars">' + [0, 1, 2].map(function (i) { return '<span style="animation-delay:' + (0.2 + i * 0.25) + 's">' + (i < stars ? '⭐' : '☆') + '</span>'; }).join('') + '</div>' +
         (chest ? '<p class="q" style="font-size:26px">🎁 เปิดกล่องสมบัติ! 💎 +' + chest + '</p>' : '') + '<p class="q">ตอบถูก ' + g.okN + ' ข้อ · 💎 +' + (g.coins + bonus) + '</p><p class="ex">💪 ตัวใหญ่ x' + g.player.scale.toFixed(1) + (sizeB ? ' → โบนัส 💎 +' + sizeB : '') + '</p>' + (stars < 3 ? '<p class="ex">ตอบถูกหมดไม่พลาดเลย = ⭐⭐⭐</p>' : '<p class="ex">เพอร์เฟกต์! ไม่พลาดสักข้อ 🎉</p>')
       : '<div class="big">💔</div><h2>หัวใจหมดแล้ว</h2><p class="q">ไม่เป็นไร! อ่านข้อที่พลาดแล้วลองใหม่นะ<br>💎 เก็บได้ ' + g.coins + ' เพชร</p>';
     var againBtn = g.adv ? (won ? '' : '<button class="btn" data-m="advagain">🔁 ลองใหม่</button>') : '<button class="btn" data-m="again">🔁 เล่นอีก</button>';
@@ -1626,6 +1683,392 @@
   if (S.settings.drive) loadGis(function () {});
   setTimeout(function () { if (S.settings.drive) driveSync(false); }, 800);
   window.__arcade = { syncAll: syncAll, syncKid: syncKid, game: function () { return G; }, S: function () { return S; }, save: save, mergeKid: mergeKid, exportObj: exportObj, importObj: importObj, migrate: migrate, K: K };
+
+  // =====================================================================
+  //  🎮 มินิเกม (เฟส 1 แผน v2): 🧗 ปีนหอคอย · ⚔️ ตีบอส · 🃏 จับคู่การ์ด
+  //  สืบทอด Game.prototype: results/ของรางวัล/modal/quit/กระดาษทด/อ่านออกเสียง ใช้ร่วมกับเกมวิ่ง
+  // =====================================================================
+  function Mini(mode, kid, subj, li, adv) {
+    var g = this;
+    g.mode = mode; g.kid = kid; g.subj = subj; g.li = li; g.adv = adv || null; g.th = theme(subj.key); g.beg = beginner(kid);
+    g.look = lookObj(kid); g.shotE = g.look.hand ? g.look.hand.shot : '👊';
+    g.lvTitle = (adv ? 'ด่าน ' + adv.n + ' · ' : '') + (adv && adv.boss ? '⚔️ บอสใหญ่คละวิชา' : li === 'boss' ? '👑 บอสใหญ่ ' + subj.name : subj.emoji + ' ' + subj.name + ' — ' + subj.levels[li].title);
+    g.hearts = g.beg ? 4 : 3; g.maxHearts = g.hearts;
+    g.coins = 0; g.mist = 0; g.okN = 0; g.combo = 0; g.missed = []; g.requeued = {};
+    g.player = { lane: 0, x: 0, run: 0, scale: 1, ts: 1 };
+    g.morph = 0; g.morphUp = true; g.parts = []; g.t = 0; g.shake = 0; g.bossFlash = 0; g.cam = 0;
+    g.startT = Date.now(); g.playSec = 0; g.state = 'intro'; g.gate = null; g.anim = null;
+    if (mode === 'cards') {
+      var pool = pairPool(subj, li), need = cardsNeed(kid);
+      g.rounds = [boardFrom(pool, need)];
+      var r2 = boardFrom(pool, need); if (r2.length >= CARDS_MIN) g.rounds.push(r2);
+      g.round = 0; g.misses = 0; g.matched = 0; g.open = [];
+      g.total = g.rounds.reduce(function (n, r) { return n + r.length; }, 0);
+    } else {
+      g.queue = g.refill(adv ? (g.beg ? 6 : 8) : 0);
+      g.total = g.queue.length; g.step = 0; g.hp = g.total;
+    }
+    g.build(); g.intro();
+  }
+  Mini.prototype = Object.create(Game.prototype);
+  Mini.prototype.refill = function (n) {
+    var g = this, q = g.adv && g.adv.boss ? buildMix(g.kid) : buildQueue(g.kid, g.subj, g.li, n || 0);
+    return q.filter(function (it) { return it.kind === 'q'; });
+  };
+  Mini.prototype.build = function () {
+    var g = this, el = document.createElement('div'); el.id = 'play'; el.className = 'mini m-' + g.mode;
+    el.innerHTML = '<canvas></canvas>' +
+      '<div class="hud"><button class="iconbtn" data-g="pause">⏸</button><span class="hearts"></span>' +
+      '<div class="bosshp"><span class="hpic"></span><div class="b"><i></i></div><span class="hpn"></span></div><span class="coins">💎 0</span></div>' +
+      (g.mode === 'cards' ? '<div class="cboard"></div><div class="chint"></div>' :
+        '<div class="mq hidden"><div class="qbox"><button class="say" data-g="say">🔊</button><div class="qt"></div><svg class="clock" viewBox="0 0 100 100" style="display:none"></svg></div>' +
+        '<div class="cards3"><button class="c0" data-g="lane" data-l="-1"></button><button class="c1" data-g="lane" data-l="0"></button><button class="c2" data-g="lane" data-l="1"></button></div></div>' +
+        '<button class="scratchbtn hidden" data-g="scratch">✏️ กระดาษทด</button>');
+    document.body.appendChild(el);
+    g.el = el; g.cv = el.querySelector('canvas'); g.cx = g.cv.getContext('2d');
+    g.heartsEl = el.querySelector('.hearts'); g.hpEl = el.querySelector('.bosshp i'); g.hpN = el.querySelector('.hpn'); g.hpIc = el.querySelector('.hpic'); g.coinEl = el.querySelector('.coins');
+    g.mq = el.querySelector('.mq'); g.qt = el.querySelector('.qt'); g.clockEl = el.querySelector('.clock');
+    g.cards = el.querySelector('.cards3'); g.cardBtns = g.cards ? g.cards.querySelectorAll('button') : [];
+    g.scratchBtn = el.querySelector('.scratchbtn'); g.board = el.querySelector('.cboard'); g.hint = el.querySelector('.chint');
+    g.strokes = []; g.penSeen = false;
+    g.updHud();
+    g.resize = g.resize.bind(g); window.addEventListener('resize', g.resize); g.resize();
+    el.addEventListener('click', function (e) {
+      var c = e.target.closest('.ccard'); if (c) return g.flip(+c.getAttribute('data-i'));
+      var b = e.target.closest('[data-g]'); if (!b) return;
+      var a = b.getAttribute('data-g');
+      if (a === 'pause') g.pause();
+      else if (a === 'say') g.sayQ(true);
+      else if (a === 'scratch') g.openScratch();
+      else if (a === 'lane') g.choose(+b.getAttribute('data-l'));
+    });
+    g.onKey = function (e) {
+      if (!G || G !== g) return;
+      if (e.key === '1' || e.key === '2' || e.key === '3') g.choose(+e.key - 2);
+      else if (e.key === 'Escape') g.pause();
+    };
+    window.addEventListener('keydown', g.onKey);
+    g.onVis = function () { if (document.hidden) g.pause(); };
+    document.addEventListener('visibilitychange', g.onVis);
+    g.last = performance.now();
+    g.loop = g.loop.bind(g); g.raf = requestAnimationFrame(g.loop);
+  };
+  Mini.prototype.resize = function () {
+    var g = this, dpr = Math.min(window.devicePixelRatio || 1, 2);
+    g.W = window.innerWidth; g.H = window.innerHeight;
+    g.cv.width = g.W * dpr; g.cv.height = g.H * dpr; g.cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.top = 62;
+    if (g.mq && !g.mq.classList.contains('hidden')) g.bot = g.mq.getBoundingClientRect().top - 8;
+    else if (!g.bot) g.bot = g.H * 0.6;
+    g.laneW = Math.min(g.W * 0.27, g.H * 0.42);
+  };
+  Mini.prototype.updHud = function () {
+    var g = this, h = '', i;
+    if (g.mode === 'cards') { g.heartsEl.textContent = '❌ ' + (g.misses || 0); }
+    else { for (i = 0; i < g.maxHearts; i++) h += i < g.hearts ? '❤️' : '🤍'; g.heartsEl.textContent = h; }
+    var frac, ic, txt;
+    if (g.mode === 'tower') { frac = g.step / g.total; ic = '🧗'; txt = 'ชั้น ' + g.step + '/' + g.total; }
+    else if (g.mode === 'boss') { frac = g.hp / g.total; ic = g.th.boss; txt = g.hp + '/' + g.total; }
+    else { frac = (g.matched || 0) / g.total; ic = '🃏'; txt = (g.matched || 0) + '/' + g.total + ' คู่'; }
+    g.hpEl.style.width = Math.max(0, Math.min(100, 100 * frac)) + '%';
+    g.hpEl.style.background = g.mode === 'boss' ? '' : 'linear-gradient(90deg, #22c55e, #a3e635)';
+    g.hpIc.textContent = ic; g.hpN.textContent = txt;
+    g.coinEl.textContent = '💎 ' + g.coins;
+  };
+  Mini.prototype.intro = function () {
+    var g = this, M = MODES[g.mode];
+    var how = {
+      tower: 'ตอบถูก = บันไดโผล่ ปีนขึ้น 1 ขั้น 🧗<br>ตอบผิด = ตกลง 1 ขั้น · ถึงยอดได้หีบสมบัติ 🎁',
+      boss: 'ตอบถูก = ฟันบอสด้วย' + (g.look.hand ? ' ' + esc(g.look.hand.n) : 'หมัด') + '! ⚔️<br>ตอบผิด = บอสตีกลับ เสียหัวใจ ❤️',
+      cards: 'ดูการ์ดให้จำก่อน แล้วการ์ดจะคว่ำ 👀<br>เปิดทีละ 2 ใบ หาคู่ที่ถูกกัน · เปิดผิดไม่เสียหัวใจ'
+    }[g.mode];
+    g.modal('<div class="big">' + lookImg(g.kid, 110) + ' <span style="font-size:46px">' + M.e + '</span>' +
+      (g.mode === 'boss' ? ' <img class="av" width="110" height="110" src="' + bossImg(g.subj.key) + '">' : '') + '</div>' +
+      '<h2>' + M.n + '</h2><p class="q">' + esc(g.lvTitle) + '</p><p class="ex">' + how + '<br>⏸ ไม่จับเวลา คิดให้ดีแล้วค่อยตอบ</p>' +
+      '<div class="row"><button class="btn green" data-m="go">▶ เริ่มเลย!</button></div>', function () { audio(); g.begin(); });
+  };
+  Mini.prototype.begin = function () { if (this.mode === 'cards') this.startRound(); else this.nextQ(); };
+  Mini.prototype.pause = function () {
+    var g = this; if (g.state !== 'ask' && g.state !== 'play') return;
+    g.prevState = g.state; g.state = 'pause'; hush();
+    g.modal('<div class="big">⏸</div><h2>พักแป๊บนึง</h2><div class="row"><button class="btn gray" data-m="quit">🚪 ออกจากด่าน</button><button class="btn green" data-m="resume">▶ เล่นต่อ</button></div>', function (a) {
+      if (a === 'resume') { g.state = g.prevState; g.last = performance.now(); } else g.quit();
+    });
+  };
+
+  // ---------- คำถาม (หอคอย / ตีบอส) ----------
+  Mini.prototype.nextQ = function () {
+    var g = this;
+    if ((g.mode === 'tower' && g.step >= g.total) || (g.mode === 'boss' && g.hp <= 0)) return g.win();
+    if (!g.queue.length) g.queue = g.refill(4);
+    var it = g.queue.shift(), q = it.q, labels = shuffle(q.c);
+    g.gate = { q: q, labels: labels, right: labels.indexOf(q.c[0]) - 1, item: it, chosen: false };
+    g.qt.textContent = q.q;
+    if (q.clock) { g.clockEl.style.display = ''; g.clockEl.innerHTML = clockSvg(q.clock); } else g.clockEl.style.display = 'none';
+    for (var i = 0; i < 3; i++) { g.cardBtns[i].textContent = labels[i]; g.cardBtns[i].classList.remove('sel', 'right', 'wrongc'); }
+    g.mq.classList.remove('hidden'); g.cards.classList.add('asking');
+    g.scratchBtn.classList.toggle('hidden', !g.isCalc());
+    g.state = 'ask'; g.player.lane = 0; g.resize(); g.sayQ(false);
+  };
+  Mini.prototype.choose = function (l) {
+    var g = this;
+    if (!g.gate || g.gate.chosen || g.state !== 'ask') return;
+    l = clamp(l, -1, 1); g.gate.chosen = true; g.player.lane = l; SFX.click();
+    g.cards.classList.remove('asking');
+    g.cardBtns[l + 1].classList.add(l === g.gate.right ? 'right' : 'wrongc');
+    g.answer(l === g.gate.right, g.gate.labels[l + 1]);
+  };
+  Mini.prototype.answer = function (ok, chosen) {
+    var g = this, gt = g.gate, q = gt.q;
+    var sk = q.skey || g.subj.key, k = K(g.kid), dr = dayRec(k), sr = k.subj[sk] = k.subj[sk] || { q: 0, ok: 0 };
+    dr.q++; sr.q++; g.scratchBtn.classList.add('hidden'); g.state = 'anim';
+    if (ok) {
+      dr.ok++; sr.ok++; g.okN++; g.combo++;
+      var gain = 10 + Math.min(g.combo - 1, 5) * 2; g.coins += gain;
+      if (k.wrong[q.id]) { k.wrong[q.id].n = Math.max(0, k.wrong[q.id].n - 1); if (!k.wrong[q.id].n) delete k.wrong[q.id]; }
+      SFX.good(); g.toast(pick(['เยี่ยม!', 'ถูกต้อง!', 'สุดยอด!', 'เก่งมาก!', 'ว้าว!']) + (g.combo > 2 ? ' x' + g.combo : '') + ' +' + gain, 900, '#16a34a');
+      g.grow(true); g.updHud(); save();
+      g.play(true, function () { g.gate = null; g.nextQ(); });
+    } else {
+      g.combo = 0; g.mist++; g.hearts--; SFX.bad(); g.grow(false);
+      g.missed.push({ q: q.q, a: q.c[0], you: chosen });
+      var w = k.wrong[q.id] = k.wrong[q.id] || { q: q.gen ? 'โจทย์สุ่ม เช่น ' + q.q : q.q, a: q.c[0], s: q.sname || g.subj.name, n: 0 };
+      w.n++; w.last = chosen;
+      g.queue.push(gt.item);   // ข้อผิดวนกลับมาอีก
+      g.updHud(); save();
+      g.play(false, function () {
+        g.mq.classList.add('hidden');
+        var m = g.modal('<div class="big">😵</div><h2>ยังไม่ถูกนะ</h2><div class="q">' + esc(q.q) + '</div>' +
+          (q.clock ? '<svg viewBox="0 0 100 100" style="width:110px;height:110px">' + clockSvg(q.clock) + '</svg>' : '') +
+          '<div class="ans">✅ ' + esc(q.c[0]) + '</div><div class="ex">' + esc(q.ex || '') + '</div><p class="ex">🔁 ข้อนี้จะกลับมาอีกครั้ง จำไว้นะ!</p>' +
+          '<div class="row"><button class="btn green" data-m="ok" disabled>เข้าใจแล้ว ▶</button></div>', function () {
+            g.gate = null; if (g.hearts <= 0) g.lose(); else g.nextQ();
+          });
+        speak((q.lang === 'en' ? 'The answer is ' : 'คำตอบที่ถูกคือ ') + (stripEmoji(q.c[0]) || ''), q.lang);
+        setTimeout(function () { var b = m.querySelector('[data-m]'); if (b) b.disabled = false; }, g.beg ? 2200 : 1500);
+      });
+    }
+  };
+  // ฉากเคลื่อนไหวหลังตอบ: ok = ปีนขึ้น/ฟันบอส · ไม่ ok = ตกลง/โดนบอสตี
+  Mini.prototype.play = function (ok, done) {
+    var g = this;
+    if (g.mode === 'tower') {
+      var from = g.step, to = ok ? g.step + 1 : Math.max(0, g.step - 1);
+      g.anim = { t: 0, dur: ok ? 0.75 : 0.8, from: from, to: to, ok: ok, done: function () { g.step = to; g.updHud(); done(); } };
+      if (ok) SFX.jump(); else if (from > to) tone(500, 0.5, 'sine', 0.1, 0, 120);
+    } else {
+      g.anim = { t: 0, dur: 0.9, ok: ok, hit: false, done: done };
+      if (ok) SFX.jump();
+    }
+  };
+  Mini.prototype.grow = function (up) {
+    var g = this, p = g.player, before = p.ts, hp = g.heroPos ? g.heroPos() : { x: g.W / 2, y: g.H / 2 };
+    p.ts = up ? Math.min(1.6, p.ts + 0.1) : Math.max(0.6, p.ts - 0.1);
+    g.morph = 0.7; g.morphUp = up;
+    if (up) { g.burst(hp.x, hp.y, ['✨', '⭐', '💪'], 10); if (p.ts > before) g.floatTxt(hp.x, hp.y - 60, 'แปลงร่าง! ⬆', '#7c3aed'); tone(400, 0.35, 'sine', 0.12, 0, 900); }
+    else { g.burst(hp.x, hp.y, ['💨', '💫'], 8); if (p.ts < before) g.floatTxt(hp.x, hp.y - 50, 'ตัวเล็กลง ⬇', '#dc2626'); tone(700, 0.35, 'sine', 0.1, 0, 250); }
+  };
+  Mini.prototype.win = function () {
+    var g = this; if (g.state === 'win') return;
+    g.state = 'win'; g.winT = 0; hush(); SFX.hit();
+    if (g.mq) g.mq.classList.add('hidden');
+    var hp = g.heroPos ? g.heroPos() : { x: g.W / 2, y: g.H / 2 };
+    g.burst(g.mode === 'boss' ? g.W * 0.72 : hp.x, g.mode === 'boss' ? g.bot * 0.6 : hp.y, ['🎉', '⭐', '✨', '💎'], 30);
+    g.toast(g.mode === 'tower' ? '🏁 ถึงยอดแล้ว!' : g.mode === 'cards' ? '🃏 ครบทุกคู่!' : '💥 ล้มบอสแล้ว!', 1400, '#16a34a');
+    setTimeout(function () { g.results(true); }, 1600);
+  };
+  Mini.prototype.lose = function () {
+    var g = this; g.state = 'lose'; SFX.lose(); hush();
+    if (g.mq) g.mq.classList.add('hidden');
+    setTimeout(function () { g.results(false); }, 600);
+  };
+
+  // ---------- 🃏 จับคู่การ์ด ----------
+  Mini.prototype.startRound = function () {
+    var g = this, pairs = g.rounds[g.round], cards = [];
+    pairs.forEach(function (pr, i) { cards.push({ t: pr.a, p: i }); cards.push({ t: pr.b, p: i }); });
+    g.deck = shuffle(cards); g.open = []; g.state = 'preview';
+    var cols = g.deck.length <= 8 ? 4 : g.deck.length <= 12 ? 4 : 5;
+    g.board.style.setProperty('--cols', cols);
+    g.board.innerHTML = g.deck.map(function (c, i) {
+      var L = stripEmoji(c.t).length;
+      return '<button class="ccard up' + (L > 9 ? ' sm' : '') + (L === 0 ? ' em' : '') + '" data-i="' + i + '" data-p="' + c.p + '"><span class="fb">' + esc(c.t) + '</span><span class="ff">⭐</span></button>';
+    }).join('');
+    var sec = g.beg ? 6 : 5;
+    g.hint.textContent = (g.rounds.length > 1 ? 'รอบ ' + (g.round + 1) + '/' + g.rounds.length + ' · ' : '') + '👀 จำให้ดี! การ์ดจะคว่ำใน ' + sec + ' วินาที';
+    speak(g.subj.lang === 'en' ? 'Remember the cards!' : 'จำการ์ดให้ดีนะ', g.subj.lang);
+    var left = sec;
+    g.prevTimer = setInterval(function () {
+      left--;
+      if (left > 0 && g.state === 'preview') { g.hint.textContent = '👀 จำให้ดี! การ์ดจะคว่ำใน ' + left + ' วินาที'; return; }
+      clearInterval(g.prevTimer);
+      if (g.state !== 'preview') return;
+      [].forEach.call(g.board.querySelectorAll('.ccard'), function (b) { b.classList.remove('up'); b.classList.add('flipanim'); });
+      g.state = 'play'; g.hint.textContent = '👆 เปิดทีละ 2 ใบ หาคู่ที่ถูกกัน'; tone(600, 0.15, 'triangle', 0.1);
+    }, 1000);
+  };
+  Mini.prototype.flip = function (i) {
+    var g = this; if (g.state !== 'play' || g.open.length >= 2) return;
+    var b = g.board.querySelector('.ccard[data-i="' + i + '"]'), c = g.deck[i];
+    if (!b || b.classList.contains('up') || b.classList.contains('ok')) return;
+    b.classList.add('up'); b.classList.remove('flipanim'); void b.offsetWidth; b.classList.add('flipanim');
+    tone(520 + g.open.length * 140, 0.08, 'sine', 0.08);
+    if (g.beg || g.subj.lang === 'en') speak(c.t, g.subj.lang);
+    g.open.push(i);
+    if (g.open.length < 2) return;
+    var a = g.deck[g.open[0]], bb = g.deck[g.open[1]], ba = g.board.querySelector('.ccard[data-i="' + g.open[0] + '"]');
+    var k = K(g.kid), sk = g.subj.key, dr = dayRec(k), sr = k.subj[sk] = k.subj[sk] || { q: 0, ok: 0 };
+    if (a.p === bb.p) {
+      ba.classList.add('ok'); b.classList.add('ok'); g.open = [];
+      g.matched++; g.okN++; g.coins += 6; dr.q++; dr.ok++; sr.q++; sr.ok++;
+      SFX.good(); g.player.ts = Math.min(1.6, g.player.ts + 0.05); g.morph = 0.4; g.morphUp = true;
+      var r = b.getBoundingClientRect(); g.burst(r.left + r.width / 2, r.top + r.height / 2, ['✨', '⭐'], 8); g.floatTxt(r.left + r.width / 2, r.top, '+6', '#16a34a');
+      var pr = g.rounds[g.round][a.p];
+      speak(stripEmoji(pr.a) + (g.subj.lang === 'en' ? ' and ' : ' คู่กับ ') + stripEmoji(pr.b), g.subj.lang);
+      g.updHud(); save();
+      if (!g.board.querySelector('.ccard:not(.ok)')) {
+        g.state = 'between';
+        setTimeout(function () {
+          g.round++;
+          if (g.round < g.rounds.length) { g.toast('รอบต่อไป! 🃏', 900, '#7c3aed'); g.startRound(); }
+          else { g.mist = Math.max(0, Math.ceil((g.misses - g.total) / 2)); g.win(); }
+        }, 1100);
+      }
+    } else {
+      g.misses++; g.updHud(); tone(200, 0.2, 'triangle', 0.08);
+      var o = g.open.slice(); g.state = 'wait';
+      setTimeout(function () {
+        o.forEach(function (j) { var e = g.board.querySelector('.ccard[data-i="' + j + '"]'); if (e) e.classList.remove('up'); });
+        g.open = []; if (g.state === 'wait') g.state = 'play';
+      }, 1000);
+    }
+  };
+
+  // ---------- ภาพ / แอนิเมชัน ----------
+  Mini.prototype.update = function (dt) {
+    var g = this, p = g.player;
+    g.t += dt; p.scale += (p.ts - p.scale) * Math.min(1, dt * 6); g.morph = Math.max(0, g.morph - dt);
+    g.shake = Math.max(0, g.shake - dt); g.bossFlash = Math.max(0, g.bossFlash - dt);
+    g.parts.forEach(function (o) { o.x += o.vx * dt; o.y += o.vy * dt; if (!o.txt) o.vy += 500 * dt; o.life -= dt; });
+    g.parts = g.parts.filter(function (o) { return o.life > 0; });
+    if (g.state === 'win') g.winT += dt;
+    var a = g.anim;
+    if (a) {
+      a.t += dt;
+      if (g.mode === 'boss' && !a.hit && a.t >= a.dur * 0.45) {
+        a.hit = true;
+        if (a.ok) {
+          g.hp = Math.max(0, g.hp - 1); g.bossFlash = 0.35; SFX.hit(); g.updHud();
+          g.burst(g.W * 0.72, g.bot - g.bossH() * 0.6, ['💥', g.shotE, '⭐'], 14); g.floatTxt(g.W * 0.72, g.bot - g.bossH() * 1.02, '-1 💥', '#dc2626');
+        } else { g.shake = 0.45; tone(150, 0.3, 'sawtooth', 0.12); var hp = g.heroPos(); g.burst(hp.x, hp.y, ['💥', '💢'], 10); }
+      }
+      if (a.t >= a.dur) { g.anim = null; a.done(); }
+    }
+    if (g.mode === 'tower') {
+      var lvl = a && g.mode === 'tower' ? a.from + (a.to - a.from) * Math.min(1, a.t / a.dur) : g.step;
+      var target = Math.max(0, lvl * g.stepH() - (g.bot - g.top) * 0.35);
+      g.cam += (target - g.cam) * Math.min(1, dt * 4);
+    }
+  };
+  Mini.prototype.stepH = function () { return (this.bot - this.top) * 0.26; };
+  Mini.prototype.bossH = function () { return (this.bot - this.top) * 0.62; };
+  Mini.prototype.platX = function (i) { return i === 0 ? this.W / 2 : this.W / 2 + (i % 2 ? -1 : 1) * Math.min(this.W * 0.17, 180); };
+  Mini.prototype.platY = function (i) { return this.bot - 16 - i * this.stepH() + this.cam; };
+  Mini.prototype.heroH = function () {
+    var g = this;
+    if (g.mode === 'tower') return g.stepH() * 0.8 * g.player.scale;
+    if (g.mode === 'boss') return (g.bot - g.top) * 0.3 * g.player.scale;
+    return Math.min(110, g.H * 0.14) * g.player.scale;
+  };
+  Mini.prototype.heroPos = function () {
+    var g = this, a = g.anim, h = g.heroH();
+    if (g.mode === 'tower') {
+      var f = a ? Math.min(1, a.t / a.dur) : 0, from = a ? a.from : g.step, to = a ? a.to : g.step;
+      var x = g.platX(from) + (g.platX(to) - g.platX(from)) * f;
+      var y = g.platY(from) + (g.platY(to) - g.platY(from)) * f - (a ? Math.sin(Math.PI * f) * g.stepH() * (a.ok ? 0.7 : 0.25) : 0);
+      return { x: x, y: y - h * 0.5, foot: y, h: h };
+    }
+    if (g.mode === 'boss') {
+      var x0 = g.W * 0.25, dx = 0;
+      if (a && a.ok) dx = Math.sin(Math.PI * Math.min(1, a.t / a.dur)) * (g.W * 0.33);
+      return { x: x0 + dx, y: g.bot - h * 0.5, foot: g.bot, h: h };
+    }
+    return { x: 70, y: g.H - h * 0.5 - 10, foot: g.H - 10, h: h };
+  };
+  Mini.prototype.draw = function () {
+    var g = this, c = g.cx, W = g.W, H = g.H, th = g.th;
+    c.save();
+    if (g.shake > 0) c.translate((Math.random() - 0.5) * 18 * g.shake, (Math.random() - 0.5) * 18 * g.shake);
+    var sky = c.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, th.sky[0]); sky.addColorStop(1, th.sky[1]);
+    c.fillStyle = sky; c.fillRect(-20, -20, W + 40, H + 40);
+    c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#000';
+    c.font = '44px ' + FONT; c.globalAlpha = 0.85;
+    for (var i = 0; i < 4; i++) c.fillText('☁️', ((i * 293 + g.t * 10) % (W + 200)) - 100, g.top + 30 + (i % 2) * 50 + (g.mode === 'tower' ? (g.cam * 0.3) % 120 : 0));
+    c.globalAlpha = 1;
+    if (g.mode === 'tower') g.drawTower();
+    else if (g.mode === 'boss') g.drawArena();
+    else { var hp0 = g.heroPos(); SK.draw(c, g.look, hp0.x, hp0.foot, hp0.h, { run: g.t * 3 }); }
+    g.parts.forEach(function (o) {
+      c.globalAlpha = Math.min(1, o.life * 1.5);
+      if (o.txt) { c.font = 'bold ' + o.s + 'px ' + FONT; c.lineWidth = 5; c.strokeStyle = '#fff'; c.strokeText(o.txt, o.x, o.y); c.fillStyle = o.col; c.fillText(o.txt, o.x, o.y); }
+      else { c.fillStyle = '#000'; c.font = o.s + 'px ' + FONT; c.fillText(o.e, o.x, o.y); }
+    });
+    c.globalAlpha = 1;
+    c.restore();
+  };
+  Mini.prototype.drawHero = function (hp, running) {
+    var g = this, c = g.cx;
+    c.fillStyle = 'rgba(0,0,0,.2)'; c.beginPath(); c.ellipse(hp.x, hp.foot + 2, hp.h * 0.28, hp.h * 0.06, 0, 0, 7); c.fill();
+    if (g.morph > 0) {
+      var k = g.morph / 0.7; c.strokeStyle = g.morphUp ? 'rgba(250,204,21,' + k + ')' : 'rgba(239,68,68,' + k + ')';
+      c.lineWidth = 8 * k; c.beginPath(); c.arc(hp.x, hp.y, hp.h * (0.7 + (1 - k) * 0.5), 0, 7); c.stroke();
+    }
+    SK.draw(c, g.look, hp.x, hp.foot, hp.h, { run: running ? g.t * 10 : null });
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+  };
+  Mini.prototype.drawTower = function () {
+    var g = this, c = g.cx, W = g.W, sh = g.stepH(), pw = Math.min(W * 0.26, 250), ph = Math.max(16, sh * 0.16);
+    c.fillStyle = g.th.grass[0]; c.fillRect(-20, g.platY(0), W + 40, g.H);   // พื้นดิน
+    for (var i = 1; i <= g.total; i++) {
+      var x = g.platX(i), y = g.platY(i);
+      if (y < -60 || y > g.H + 40) continue;
+      var reached = i <= g.step + (g.anim && g.anim.ok ? 1 : 0);
+      if (i === g.total) {   // ยอดหอคอย
+        rrect(c, x - pw / 2, y, pw, ph * 1.2, 10, '#facc15'); rrect(c, x - pw / 2, y + ph * 1.2, pw, 8, 4, '#ca8a04');
+        c.font = sh * 0.45 + 'px ' + FONT; c.fillStyle = '#000'; c.fillText(g.state === 'win' ? '💰' : '🎁', x + pw * 0.28, y - sh * 0.2); c.fillText('🏁', x - pw * 0.3, y - sh * 0.25);
+      } else if (reached || i === g.step + 1) {
+        var col = reached ? g.th.c[0] : 'rgba(255,255,255,.55)';
+        rrect(c, x - pw / 2, y, pw, ph, 10, col); rrect(c, x - pw / 2, y + ph - 4, pw, 8, 4, reached ? g.th.c[1] : 'rgba(0,0,0,.12)');
+        if (!reached) { c.font = 'bold ' + ph * 0.9 + 'px ' + FONT; c.fillStyle = '#7c3aed'; c.fillText('?', x, y + ph / 2); }
+      } else {
+        c.setLineDash([8, 8]); c.strokeStyle = 'rgba(255,255,255,.7)'; c.lineWidth = 3; c.strokeRect(x - pw / 2, y, pw, ph); c.setLineDash([]);
+      }
+      c.font = 'bold 16px ' + FONT; c.fillStyle = 'rgba(0,0,0,.35)'; c.fillText(String(i), x - pw / 2 - 16, y + ph / 2);
+    }
+    var hp = g.heroPos();
+    g.drawHero(hp, !!g.anim);
+  };
+  Mini.prototype.drawArena = function () {
+    var g = this, c = g.cx, W = g.W, a = g.anim;
+    c.fillStyle = g.th.grass[0]; c.fillRect(-20, g.bot, W + 40, g.H);
+    c.fillStyle = g.th.grass[1]; c.fillRect(-20, g.bot, W + 40, 10);
+    // บอส
+    var bh = g.bossH(), bx = W * 0.72, f = a ? Math.min(1, a.t / a.dur) : 0;
+    if (a && !a.ok) bx -= Math.sin(Math.PI * f) * W * 0.3;
+    if (g.state === 'win') { c.globalAlpha = Math.max(0, 1 - g.winT / 1.2); bh *= 1 + g.winT * 0.3; }
+    c.fillStyle = 'rgba(0,0,0,.2)'; c.beginPath(); c.ellipse(bx, g.bot + 2, bh * 0.22, bh * 0.04, 0, 0, 7); c.fill();
+    if (g.bossFlash > 0) { c.shadowColor = '#fff'; c.shadowBlur = 40; }
+    SK.draw(c, SK.BOSSES[g.subj.key] || SK.BOSSES.thai, bx + (g.bossFlash > 0 ? (Math.random() - 0.5) * 16 : 0), g.bot, bh, { run: g.state === 'win' ? null : g.t * 2.5 });
+    c.shadowBlur = 0; c.globalAlpha = 1;
+    // อาวุธพุ่งใส่บอส
+    if (a && a.ok && f > 0.3 && f < 0.6) { c.font = bh * 0.3 + 'px ' + FONT; c.fillStyle = '#000'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(g.shotE, bx - bh * 0.1, g.bot - bh * 0.6); }
+    var hp = g.heroPos();
+    if (a && !a.ok && f > 0.45 && Math.floor(g.t * 14) % 2) c.globalAlpha = 0.4;
+    g.drawHero(hp, !!a);
+    c.globalAlpha = 1;
+  };
+  function rrect(c, x, y, w, h, r, col) { c.fillStyle = col; c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); c.fill(); }
 
   // ---------- เริ่ม ----------
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { if (!G) render(); });

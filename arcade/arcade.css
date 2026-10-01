@@ -238,3 +238,34 @@ img.av { vertical-align: middle; image-rendering: auto; }
 .iconbtn.cloud { width: auto; padding: 0 10px; font-size: 20px; }
 .iconbtn.cloud.busy { animation: pulse 1s ease-in-out infinite; }
 .iconbtn.cloud.need, .iconbtn.cloud.err { background: #fef3c7; }
+
+/* ---------- เลือกเกม + มินิเกม (เฟส 1) ---------- */
+.modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 12px 0 4px; }
+.mode { position: relative; background: #fff; border: 4px solid #c4b5fd; border-radius: 24px; padding: 14px 8px; display: flex; flex-direction: column; align-items: center; gap: 4px; box-shadow: 0 6px 0 #a78bfa; color: #2b2350; }
+.mode:active { transform: translateY(4px); box-shadow: 0 2px 0 #a78bfa; }
+.mode .me { font-size: 56px; line-height: 1.1; }
+.mode b { font-size: 20px; }
+.mode small { font-size: 14px; color: #6b5ca5; }
+.mode.off { opacity: .45; filter: grayscale(1); }
+.mode .x2 { position: absolute; top: -10px; right: -6px; background: #db2777; color: #fff; font-weight: 900; font-size: 15px; padding: 3px 10px; border-radius: 999px; animation: wiggle 1.2s ease-in-out infinite; }
+@media (max-width: 560px) { .modes { grid-template-columns: 1fr; } .mode { flex-direction: row; justify-content: flex-start; gap: 12px; } .mode .me { font-size: 40px; } }
+#play.mini .bosshp .hpn { font-size: 14px; white-space: nowrap; }
+#play.mini .mq { position: absolute; left: 50%; transform: translateX(-50%); bottom: 14px; width: min(94vw, 900px); z-index: 3; display: flex; flex-direction: column; gap: 10px; }
+#play.mini .mq.hidden { display: none; }
+#play.mini .mq .qbox, #play.mini .mq .cards3 { position: static; transform: none; width: 100%; left: auto; top: auto; }
+#play.mini .cards3 button { min-height: 64px; }
+#play.mini .cards3 button.right { outline: 6px solid #22c55e; transform: scale(1.05); }
+#play.mini .cards3 button.wrongc { outline: 6px solid #ef4444; opacity: .7; }
+#play.mini .scratchbtn { bottom: auto; top: 62px; left: 12px; padding: 10px 16px; font-size: 18px; }
+.cboard { position: absolute; left: 50%; transform: translateX(-50%); top: 64px; bottom: 64px; width: min(96vw, 940px); z-index: 3;
+  display: grid; grid-template-columns: repeat(var(--cols, 4), 1fr); grid-auto-rows: 1fr; gap: 10px; }
+.ccard { position: relative; border-radius: 18px; padding: 6px; font-size: clamp(18px, 2.8vw, 30px); font-weight: 900; color: #fff; word-break: break-word; line-height: 1.2;
+  background: linear-gradient(160deg, #8b5cf6, #db2777); box-shadow: 0 6px 0 rgba(0,0,0,.25); }
+.ccard .fb { display: none; } .ccard .ff { font-size: 1.6em; opacity: .85; }
+.ccard.up { background: #fff; color: #2b2350; } .ccard.up .fb { display: inline; } .ccard.up .ff { display: none; }
+.ccard.sm { font-size: clamp(14px, 2.1vw, 22px); } .ccard.em .fb { font-size: 1.8em; }
+.ccard.ok { background: #dcfce7; color: #166534; outline: 5px solid #22c55e; opacity: .9; } .ccard.ok .fb { display: inline; } .ccard.ok .ff { display: none; }
+.ccard.flipanim { animation: flipc .3s ease-out; }
+@keyframes flipc { 0% { transform: scaleX(1); } 50% { transform: scaleX(.05); } 100% { transform: scaleX(1); } }
+.chint { position: absolute; left: 50%; transform: translateX(-50%); bottom: 14px; z-index: 3; font-size: clamp(18px, 2.6vw, 26px); font-weight: 900; color: #fff;
+  background: rgba(124,58,237,.88); padding: 8px 20px; border-radius: 999px; white-space: nowrap; }
