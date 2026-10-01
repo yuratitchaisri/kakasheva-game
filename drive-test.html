@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ทดสอบซิงก์ Google Drive — ฮีโร่ตะลุยสอบ</title>
+  <!-- หน้าทดลอง (เฟส 3 ของ _context/แผนเกม-v2-…md): ลองล็อกอิน Google + เขียน/อ่านไฟล์ใน Drive บน iPad จริง ก่อนต่อเข้าเกม -->
+  <style>
+    body { font-family: system-ui, "Thonburi", sans-serif; background: #f5f3ff; color: #2b2350; margin: 0; padding: 16px; }
+    .box { max-width: 640px; margin: 0 auto; background: #fff; border-radius: 22px; padding: 18px; box-shadow: 0 6px 0 rgba(0,0,0,.12); }
+    h1 { font-size: 24px; margin: 0 0 6px; }
+    p { font-size: 17px; }
+    button { display: block; width: 100%; margin: 10px 0; padding: 16px; font-size: 20px; font-weight: 800; border: 0; border-radius: 18px; color: #fff; background: #7c3aed; box-shadow: 0 5px 0 #4c1d95; }
+    button:disabled { opacity: .4; }
+    .res { margin-top: 14px; padding: 12px; border-radius: 14px; background: #f1f5f9; font-size: 17px; line-height: 1.6; }
+    .ok { color: #15803d; font-weight: 800; } .bad { color: #b91c1c; font-weight: 800; }
+    pre { white-space: pre-wrap; font-size: 12px; color: #64748b; max-height: 200px; overflow: auto; }
+  </style>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+<div class="box">
+  <h1>🔄 ทดสอบซิงก์ Google Drive</h1>
+  <p>เปิดหน้านี้ <b>2 แบบ</b> แล้วกดปุ่ม 1 → 2 → 3 ตามลำดับ · เสร็จแล้ว <b>ถ่ายภาพหน้าจอกล่องผลลัพธ์</b> ส่งให้ AI</p>
+  <p id="mode"></p>
+  <button id="b1">1️⃣ ล็อกอิน Google (kakasheva.platon)</button>
+  <button id="b2" disabled>2️⃣ เขียนไฟล์ทดสอบลง Drive</button>
+  <button id="b3" disabled>3️⃣ อ่านไฟล์กลับมา</button>
+  <div class="res" id="res">ยังไม่ได้ทดสอบ</div>
+  <pre id="log"></pre>
+</div>
+<script>
+  var CLIENT_ID = '576999872813-ro8i8nscem03slml0fm37jstge6phboq.apps.googleusercontent.com';
+  var SCOPE = 'https://www.googleapis.com/auth/drive.file';
+  var FOLDER = 'ฮีโร่ตะลุยสอบ-save';
+  var token = null, folderId = null, fileId = null, results = {};
+  var standalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+  document.getElementById('mode').innerHTML = 'ตอนนี้เปิดจาก: <b>' + (standalone ? '📱 ไอคอนบนหน้าจอโฮม' : '🧭 Safari / เบราว์เซอร์') + '</b>';
+
+  function log(s) { document.getElementById('log').textContent += new Date().toLocaleTimeString() + '  ' + s + '\n'; }
+  function show() {
+    var h = '<b>ผลทดสอบ (' + (standalone ? 'หน้าจอโฮม' : 'Safari') + ')</b><br>';
+    [['login', '1. ล็อกอิน'], ['write', '2. เขียนไฟล์'], ['read', '3. อ่านไฟล์']].forEach(function (x) {
+      var r = results[x[0]];
+      h += x[1] + ': ' + (r == null ? '—' : r.ok ? '<span class="ok">✅ ผ่าน</span>' : '<span class="bad">❌ ' + r.msg + '</span>') + '<br>';
+    });
+    h += '<small>' + navigator.userAgent.replace(/\(([^)]*)\)/, '($1)').slice(0, 120) + '</small>';
+    document.getElementById('res').innerHTML = h;
+  }
+  function api(method, url, body, headers) {
+    return fetch(url, { method: method, headers: Object.assign({ Authorization: 'Bearer ' + token }, headers || {}), body: body })
+      .then(function (r) { return r.text().then(function (t) { if (!r.ok) throw new Error(r.status + ' ' + t.slice(0, 160)); return t ? JSON.parse(t) : {}; }); });
+  }
+  function findOrCreateFolder() {
+    var q = encodeURIComponent("name='" + FOLDER + "' and mimeType='application/vnd.google-apps.folder' and trashed=false");
+    return api('GET', 'https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name)').then(function (r) {
+      if (r.files && r.files.length) return r.files[0].id;
+      return api('POST', 'https://www.googleapis.com/drive/v3/files', JSON.stringify({ name: FOLDER, mimeType: 'application/vnd.google-apps.folder' }), { 'Content-Type': 'application/json' }).then(function (f) { return f.id; });
+    });
+  }
+  function upsert(name, obj) {
+    var q = encodeURIComponent("name='" + name + "' and '" + folderId + "' in parents and trashed=false");
+    return api('GET', 'https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id)').then(function (r) {
+      var id = r.files && r.files[0] && r.files[0].id;
+      var meta = id ? {} : { name: name, parents: [folderId], mimeType: 'application/json' };
+      var bd = 'ksl' + Date.now();
+      var body = '--' + bd + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) + '\r\n--' + bd + '\r\nContent-Type: application/json\r\n\r\n' + JSON.stringify(obj) + '\r\n--' + bd + '--';
+      var url = id ? 'https://www.googleapis.com/upload/drive/v3/files/' + id + '?uploadType=multipart' : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+      return api(id ? 'PATCH' : 'POST', url, body, { 'Content-Type': 'multipart/related; boundary=' + bd });
+    });
+  }
+
+  document.getElementById('b1').onclick = function () {
+    if (!window.google || !google.accounts || !google.accounts.oauth2) { results.login = { ok: false, msg: 'โหลดสคริปต์ Google ไม่ได้ (เน็ต?)' }; show(); return; }
+    var tc = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID, scope: SCOPE, hint: 'kakasheva.platon@gmail.com',
+      callback: function (resp) {
+        if (resp.error) { results.login = { ok: false, msg: resp.error + ' ' + (resp.error_description || '') }; log('login error ' + JSON.stringify(resp)); show(); return; }
+        token = resp.access_token; results.login = { ok: true }; log('login ok, expires_in=' + resp.expires_in + ' scope=' + resp.scope);
+        document.getElementById('b2').disabled = false; show();
+      },
+      error_callback: function (err) { results.login = { ok: false, msg: (err.type || 'error') + ' — หน้าต่างล็อกอินถูกปิด/ถูกบล็อก' }; log('login popup error ' + JSON.stringify(err)); show(); }
+    });
+    log('เปิดหน้าต่างล็อกอิน…');
+    tc.requestAccessToken();
+  };
+  document.getElementById('b2').onclick = function () {
+    log('หา/สร้างโฟลเดอร์ ' + FOLDER);
+    findOrCreateFolder().then(function (id) { folderId = id; log('folder ' + id); return upsert('drive-test.json', { test: true, at: new Date().toISOString(), from: standalone ? 'homescreen' : 'safari', ua: navigator.userAgent }); })
+      .then(function (f) { fileId = f.id; results.write = { ok: true }; log('write ok ' + f.id); document.getElementById('b3').disabled = false; show(); })
+      .catch(function (e) { results.write = { ok: false, msg: e.message }; log('write fail ' + e.message); show(); });
+  };
+  document.getElementById('b3').onclick = function () {
+    api('GET', 'https://www.googleapis.com/drive/v3/files/' + fileId + '?alt=media')
+      .then(function (o) { results.read = { ok: !!o.test, msg: 'อ่านได้แต่ข้อมูลไม่ตรง' }; log('read ' + JSON.stringify(o).slice(0, 120)); show(); })
+      .catch(function (e) { results.read = { ok: false, msg: e.message }; log('read fail ' + e.message); show(); });
+  };
+  show();
+</script>
+</body>
+</html>
