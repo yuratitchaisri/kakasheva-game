@@ -6,7 +6,9 @@
   'use strict';
 
   var DATA = window.ARCADE_DATA || { kids: {} };
-  var SAVE_KEY = 'ksl_arcade_v1';
+  var SAVE_KEY = 'ksl_arcade_v1';   // ชื่อ key คงเดิมตลอด — เวอร์ชันโครงสร้างอยู่ในฟิลด์ v
+  var SAVE_V = 2;                   // ⚠️ เปลี่ยนโครงสร้าง save = บวกเลข + เพิ่มขั้นแปลงใน migrate()
+  var SEASON = DATA.season || 3;    // ซีซั่น = สอบครั้งที่
   var FONT = '"Mali","Thonburi","Leelawadee UI","Noto Sans Thai",system-ui,sans-serif';
   var app = document.getElementById('app');
 
@@ -35,22 +37,114 @@
 
   // ---------- บันทึก ----------
   var S = load();
+  var lastSnap = {};
+  Object.keys(S.kids).forEach(function (n) { lastSnap[n] = snapOf(S.kids[n]); });
   function load() {
     var d;
     try { d = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { d = null; }
-    d = d || {};
-    d.kids = d.kids || {};
+    d = migrate(d || {});
     d.settings = d.settings || {};
     if (d.settings.sound === undefined) d.settings.sound = true;
     if (d.settings.voice === undefined) d.settings.voice = true;
     if (d.settings.limit === undefined) d.settings.limit = 30;
     return d;
   }
-  function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {} }
+  // ---------- แปลง save เวอร์ชันเก่า (ห้ามทิ้งข้อมูลที่ไม่รู้จัก) ----------
+  function migrate(d) {
+    d.kids = d.kids || {};
+    if (!d.v || d.v < 2) {   // v1 → v2: ดาวแยกตามซีซั่น · รหัสคำถามถาวร · เวลาแก้ไขล่าสุด
+      Object.keys(d.kids).forEach(function (n) {
+        var k = d.kids[n];
+        k.seasons = k.seasons || {};
+        var ss = k.seasons[String(SEASON)] = k.seasons[String(SEASON)] || { stars: {} };
+        if (k.stars) { for (var key in k.stars) ss.stars[key] = Math.max(ss.stars[key] || 0, k.stars[key]); delete k.stars; }
+        var nw = {};
+        Object.keys(k.wrong || {}).forEach(function (id) { var to = mapOldQid(n, id); nw[to] = k.wrong[id]; });
+        k.wrong = nw;
+        if (k.adv && !k.adv.season) k.adv.season = SEASON;
+        k.updatedAt = k.updatedAt || Date.now();
+      });
+      d.v = 2;
+    }
+    return d;
+  }
+  function mapOldQid(kid, id) {
+    var m = id.match(/^gen:([a-z]+):([a-z]+)$/);
+    if (m) return 's' + SEASON + '.' + m[1] + '.gen.' + m[2];
+    m = id.match(/^([a-z]+):(\d+):(\d+)$/);
+    if (m) {
+      var subs = (DATA.kids[kid] || {}).subjects || [], sj = subs.filter(function (x) { return x.key === m[1]; })[0];
+      var lv = sj && sj.levels[+m[2]], q = lv && lv.mc[+m[3]];
+      if (q && q.id) return q.id;
+    }
+    return id.indexOf('.') > 0 ? id : 'legacy.' + id;
+  }
+  // ภาพรวมข้อมูลลูก (ไม่นับเวลาแก้ไข) — ใช้ตรวจว่ามีอะไรเปลี่ยนก่อนตั้ง updatedAt
+  function snapOf(k) { return JSON.stringify(k, function (key, v) { return key === 'updatedAt' || key === 'rev' ? undefined : v; }); }
+  function save() {
+    Object.keys(S.kids).forEach(function (n) {
+      var sn = snapOf(S.kids[n]);
+      if (sn !== lastSnap[n]) { S.kids[n].updatedAt = Date.now(); S.kids[n].rev = (S.kids[n].rev || 0) + 1; lastSnap[n] = sn; }
+    });
+    S.v = SAVE_V;
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {}
+  }
+  // ---------- รวมข้อมูล 2 ชุดของลูกคนเดียวกัน (นำเข้าไฟล์ / ซิงก์ Drive) — ห้ามของหาย ----------
+  function mergeKid(a, b) {
+    if (!a) return JSON.parse(JSON.stringify(b));
+    if (!b) return JSON.parse(JSON.stringify(a));
+    var newer = (b.updatedAt || 0) > (a.updatedAt || 0) ? b : a;
+    var r = JSON.parse(JSON.stringify(newer));   // เพชร · ชุดที่ใส่ · ข้อผิด · ของขวัญรายวัน = ตามชุดที่ใหม่กว่า
+    function uni(x, y) { var o = (x || []).slice(); (y || []).forEach(function (i) { if (o.indexOf(i) < 0) o.push(i); }); return o; }
+    r.inv = uni(a.inv, b.inv); r.owned = uni(a.owned, b.owned);   // ของสะสม = รวมทั้งสองฝั่ง
+    r.seasons = r.seasons || {};
+    [a, b].forEach(function (k) {
+      Object.keys(k.seasons || {}).forEach(function (sn) {
+        var t = r.seasons[sn] = r.seasons[sn] || { stars: {} }, st = (k.seasons[sn] || {}).stars || {};
+        t.stars = t.stars || {};
+        for (var key in st) t.stars[key] = Math.max(t.stars[key] || 0, st[key]);   // ดาว = ค่ามาก
+      });
+    });
+    var aa = a.adv || {}, ba = b.adv || {};
+    if (a.adv || b.adv) {   // ด่านผจญภัย = เอาฝั่งที่ไปได้ไกลกว่า + รวมประวัติ
+      r.adv = JSON.parse(JSON.stringify((aa.lv || 1) >= (ba.lv || 1) ? aa : ba));
+      r.adv.log = Object.assign({}, aa.log || {}, ba.log || {}, r.adv.log || {});
+      if (aa.best != null || ba.best != null) r.adv.best = Math.max(aa.best || 0, ba.best || 0);
+    }
+    r.subj = {};
+    [a, b].forEach(function (k) { for (var sk in k.subj || {}) { var x = r.subj[sk] = r.subj[sk] || { q: 0, ok: 0 }; x.q = Math.max(x.q, k.subj[sk].q || 0); x.ok = Math.max(x.ok, k.subj[sk].ok || 0); } });
+    r.days = {};
+    [a, b].forEach(function (k) { for (var d in k.days || {}) { var x = r.days[d] = r.days[d] || { sec: 0, q: 0, ok: 0 }; ['sec', 'q', 'ok'].forEach(function (f) { x[f] = Math.max(x[f], k.days[d][f] || 0); }); } });
+    if (a.pets || b.pets) {   // (เฟส 2) สัตว์เลี้ยง = รวมตาม id เอา XP มาก
+      var pm = {};
+      [a, b].forEach(function (k) { (k.pets || []).forEach(function (p) { var o = pm[p.id]; if (!o || (p.xp || 0) > (o.xp || 0)) pm[p.id] = JSON.parse(JSON.stringify(p)); }); });
+      r.pets = Object.keys(pm).map(function (id) { return pm[id]; });
+    }
+    for (var sl in r.look || {}) if (sl !== 'base' && r.look[sl] && r.inv.indexOf(r.look[sl]) < 0) delete r.look[sl];
+    r.updatedAt = Math.max(a.updatedAt || 0, b.updatedAt || 0);
+    r.rev = Math.max(a.rev || 0, b.rev || 0);
+    return r;
+  }
+  function exportObj() { return { app: 'ksl-arcade', v: SAVE_V, season: SEASON, exportedAt: new Date().toISOString(), kids: JSON.parse(JSON.stringify(S.kids)) }; }
+  function importObj(o) {
+    if (!o || o.app !== 'ksl-arcade' || !o.kids) throw new Error('ไม่ใช่ไฟล์ save ของเกมนี้');
+    o = migrate(JSON.parse(JSON.stringify(o)));
+    var res = [];
+    Object.keys(o.kids).forEach(function (n) { S.kids[n] = mergeKid(S.kids[n], o.kids[n]); res.push(n); });
+    lastSnap = {}; save();
+    return res;
+  }
   function K(name) {
     var k = S.kids[name];
     if (!k) {
-      k = S.kids[name] = { coins: 0, hero: DEFAULT_HERO[name] || 'noob', owned: [], stars: {}, wrong: {}, subj: {}, days: {}, gift: '' };
+      k = S.kids[name] = { coins: 0, hero: DEFAULT_HERO[name] || 'noob', owned: [], seasons: {}, wrong: {}, subj: {}, days: {}, gift: '' };
+    }
+    // k.stars = ดาวของซีซั่นปัจจุบัน (ทางลัด ไม่ถูกบันทึกซ้ำ — ของจริงอยู่ใน k.seasons)
+    if (!Object.getOwnPropertyDescriptor(k, 'stars')) {
+      Object.defineProperty(k, 'stars', { enumerable: false, configurable: true, get: function () {
+        var ss = k.seasons = k.seasons || {}, x = ss[String(SEASON)] = ss[String(SEASON)] || { stars: {} };
+        x.stars = x.stars || {}; return x.stars;
+      } });
     }
     if (!SK.BY[k.hero]) k.hero = DEFAULT_HERO[name] || 'noob';   // เซฟเก่าที่เป็นอีโมจิ
     k.look = k.look || { base: k.hero }; if (!SK.BY[k.look.base]) k.look.base = k.hero;
@@ -181,7 +275,7 @@
 
   // ---------- เตรียมคิวคำถามของด่าน ----------
   function prepMc(m, subj, li, qi) {
-    return { id: subj.key + ':' + li + ':' + qi, q: m.q, say: m.say, c: m.c.slice(0, 3), ex: m.ex || '', clock: m.clock, lang: subj.lang, gen: m.gen, skey: subj.key, sname: subj.name };
+    return { id: m.id || ('s' + SEASON + '.' + subj.key + '.' + li + '.' + qi), q: m.q, say: m.say, c: m.c.slice(0, 3), ex: m.ex || '', clock: m.clock, lang: subj.lang, gen: m.gen, skey: subj.key, sname: subj.name };
   }
   function buildQueue(kid, subj, li, nOver) {
     var beg = beginner(kid), nQ, levels, mcs = [], gens = [], sorts = [];
@@ -203,7 +297,7 @@
     var rest = shuffle(mcs.filter(function (m) { return wrongFirst.indexOf(m) < 0; }));
     var nGen = gens.length ? Math.round(nQ * (mcs.length ? 0.35 : 1)) : 0;
     var chosen = wrongFirst.concat(rest).slice(0, nQ - nGen);
-    for (var i = 0; i < nGen; i++) { var gq = genQ(pick(gens), subj.lang); if (gq) { gq.id = 'gen:' + subj.key + ':' + gq.gen; gq.lang = subj.lang; gq.skey = subj.key; gq.sname = subj.name; chosen.push(gq); } }
+    for (var i = 0; i < nGen; i++) { var gq = genQ(pick(gens), subj.lang); if (gq) { gq.id = 's' + SEASON + '.' + subj.key + '.gen.' + gq.gen; gq.lang = subj.lang; gq.skey = subj.key; gq.sname = subj.name; chosen.push(gq); } }
     chosen = shuffle(chosen).map(function (q) { return { kind: 'q', q: q }; });
     if (sorts.length) {
       var sp = shuffle(sorts);
@@ -221,7 +315,11 @@
   //  ทุก 5 ด่าน = บอสใหญ่คละวิชา (เป็นช่วง ๆ วิชาละ 2–3 ข้อ ไม่สลับทุกข้อ) · ทุก 10 ด่าน = กล่องสมบัติ
   //  เกมเลือกวิชาให้เอง: เน้นวิชาที่ยังมีด่านไม่ได้ดาว + วิชาที่ผิดบ่อย · ไม่ซ้ำ 2 ด่านล่าสุด
   // =====================================================================
-  function advState(k) { k.adv = k.adv || { lv: 1, recent: [], log: {} }; return k.adv; }
+  function advState(k) {
+    k.adv = k.adv || { lv: 1, recent: [], log: {}, season: SEASON };
+    if (k.adv.season !== SEASON) { k.adv.season = SEASON; k.adv.cur = null; k.adv.recent = []; }   // ซีซั่นใหม่: เลขด่านเดินต่อ แต่วิชา/ด่านค้างเริ่มใหม่
+    return k.adv;
+  }
   function subjByKey(kid, key) { return (kidInfo(kid).subjects || []).filter(function (s) { return s.key === key; })[0]; }
   function advPick(kid) {
     var k = K(kid), a = advState(k), subs = kidInfo(kid).subjects || [];
@@ -232,7 +330,7 @@
     if (!cands.length) cands = subs;
     var ws = cands.map(function (s) {
       var zero = s.levels.filter(function (_, i) { return !k.stars[s.key + ':' + i]; }).length / s.levels.length;
-      var wr = Object.keys(k.wrong).filter(function (id) { return id.indexOf(s.key + ':') === 0 || id.indexOf('gen:' + s.key + ':') === 0; }).length;
+      var wr = Object.keys(k.wrong).filter(function (id) { return id.indexOf('s' + SEASON + '.' + s.key + '.') === 0; }).length;
       return 1 + 2 * zero + Math.min(3, wr * 0.3);
     });
     var tot = ws.reduce(function (x, y) { return x + y; }, 0), r = Math.random() * tot, si = 0;
@@ -459,7 +557,10 @@
       '<p>เวลาเล่นต่อวัน (ต่อคน): <select data-set="limit">' + [0, 15, 20, 30, 45, 60].map(function (m) { return '<option value="' + m + '"' + (S.settings.limit === m ? ' selected' : '') + '>' + (m ? m + ' นาที' : 'ไม่จำกัด') + '</option>'; }).join('') + '</select>' +
       ' <small>(ครบเวลาแล้วเกมให้พักสายตา · ด่านที่เล่นอยู่เล่นจนจบได้)</small></p>' +
       '<p><label><input type="checkbox" data-set="voice"' + (S.settings.voice ? ' checked' : '') + '> อ่านโจทย์ออกเสียง</label> &nbsp; ' +
-      '<label><input type="checkbox" data-set="sound"' + (S.settings.sound ? ' checked' : '') + '> เสียงประกอบ</label></p></div>';
+      '<label><input type="checkbox" data-set="sound"' + (S.settings.sound ? ' checked' : '') + '> เสียงประกอบ</label></p></div>' +
+      '<div class="card"><h3>💾 สำรอง / ย้าย save</h3><p>save เก็บอยู่ในเครื่องนี้ · กด <b>สำรอง</b> แล้วเลือก “บันทึกไปยังไฟล์” หรือ Google Drive · เปลี่ยนเครื่อง/save หาย → <b>นำเข้า</b> ไฟล์นั้น (ของในเครื่องไม่หาย — รวมกันให้)</p>' +
+      '<div class="row" style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn small blue" data-act="backup">💾 สำรอง save</button>' +
+      '<button class="btn small green" data-act="restore">📥 นำเข้า save</button><input type="file" id="restoreFile" accept=".json,application/json" style="display:none"></div></div>';
     Object.keys(DATA.kids).forEach(function (n) {
       var info = kidInfo(n), k = K(n);
       var days = Object.keys(k.days).sort().slice(-7);
@@ -494,6 +595,33 @@
       '<div class="row"><button class="btn gray" data-close>ยกเลิก</button><button class="btn green" id="pgok">ตกลง</button></div>');
     var ok = document.getElementById('pgok');
     ok.onclick = function () { var v = parseInt(document.getElementById('pg').value, 10); closeModal(); if (v === a * b) then(); };
+  }
+
+  function doBackup() {
+    save();
+    var json = JSON.stringify(exportObj(), null, 1), name = 'ฮีโร่ตะลุยสอบ-save-' + today() + '.json';
+    var file = null;
+    try { file = new File([json], name, { type: 'application/json' }); } catch (e) {}
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {   // iPad: เมนูแชร์ → บันทึกไปยังไฟล์ / Drive
+      navigator.share({ files: [file], title: name }).catch(function () {});
+      return;
+    }
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' })); a.download = name;
+    document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+  function doRestore(f) {
+    if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function () {
+      try {
+        var names = importObj(JSON.parse(rd.result));
+        modalMenu('<div class="big">✅</div><h2>นำเข้า save แล้ว</h2><p class="q">' + names.map(function (n) { var k = K(n); return esc(n) + ': ด่าน ' + ((k.adv && k.adv.lv) || 1) + ' · ของ ' + (k.inv || []).length + ' ชิ้น · 💎 ' + k.coins; }).join('<br>') + '</p><div class="row"><button class="btn green" data-close>ตกลง</button></div>', function () { render(); });
+      } catch (e) {
+        modalMenu('<div class="big">⚠️</div><h2>นำเข้าไม่ได้</h2><p class="q">' + esc(e.message) + '</p><div class="row"><button class="btn" data-close>ตกลง</button></div>');
+      }
+    };
+    rd.readAsText(f);
   }
 
   // ---------- modal บนหน้าเมนู ----------
@@ -532,6 +660,8 @@
     else if (act === 'equip') { var ke = K(cur.kid), sl = t.getAttribute('data-slot'), id = t.getAttribute('data-id'); if (id) ke.look[sl] = id; else delete ke.look[sl]; save(); SFX.pop(); renderShop(); }
     else if (act === 'sound') { S.settings.sound = !S.settings.sound; save(); renderHome(); }
     else if (act === 'parent') { parentGate(function () { go('parent'); }); }
+    else if (act === 'backup') { doBackup(); }
+    else if (act === 'restore') { document.getElementById('restoreFile').click(); }
     else if (act === 'bonus') { K(t.getAttribute('data-kid')).coins += 50; save(); renderParent(); }
     else if (act === 'reset') {
       var n = t.getAttribute('data-kid');
@@ -539,6 +669,7 @@
     }
   });
   app.addEventListener('change', function (e) {
+    if (e.target.id === 'restoreFile') { doRestore(e.target.files[0]); e.target.value = ''; return; }
     var t = e.target, k = t.getAttribute('data-set'); if (!k) return;
     if (k === 'limit') S.settings.limit = +t.value; else S.settings[k] = t.checked;
     save();
@@ -1360,7 +1491,7 @@
   }
 
   // ช่องทางให้หน้าเทสต์ (tools/test-arcade.html) เข้าถึงเกมที่กำลังเล่น
-  window.__arcade = { game: function () { return G; } };
+  window.__arcade = { game: function () { return G; }, S: function () { return S; }, save: save, mergeKid: mergeKid, exportObj: exportObj, importObj: importObj, migrate: migrate, K: K };
 
   // ---------- เริ่ม ----------
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { if (!G) render(); });
