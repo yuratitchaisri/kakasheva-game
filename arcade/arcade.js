@@ -17,7 +17,43 @@
   var HEROES = SK.SKINS;
   function heroImg(id, px) { return '<img class="av" src="' + SK.img(id, px * 2) + '" width="' + px + '" height="' + px + '" alt="">'; }
   // ตัวละคร + ของที่ใส่อยู่ของลูกคนนั้น
-  function lookObj(kid, over) { var l = {}, b = K(kid).look; for (var x in b) l[x] = b[x]; if (over) for (var y in over) l[y] = over[y]; return SK.compose(l); }
+  function lookObj(kid, over) {
+    var l = {}, b = K(kid).look; for (var x in b) l[x] = b[x]; if (over) for (var y in over) l[y] = over[y];
+    var o = SK.compose(l), pet = activePet(K(kid));
+    if (pet && !(over && over.nopet)) o.petObj = petDraw(pet);
+    return o;
+  }
+
+  // =====================================================================
+  //  🐾 สัตว์เลี้ยง (เฟส 2 แผน v2) — ไม่มีระบบหิว/เศร้า (พ่อสั่ง)
+  //  k.pets = [{id, sp, name, xp, hatched, mystery, look:{phat,pneck,pback,pglass}, at}] · k.petActive = id
+  // =====================================================================
+  var PET_STAGES = [{ n: 'ไข่', xp: 0 }, { n: 'ทารก', xp: 0 }, { n: 'เด็ก', xp: 40 }, { n: 'วัยรุ่น', xp: 120 }, { n: 'โตเต็มวัย', xp: 250 }, { n: '✨ ตำนาน', xp: 450 }];
+  var PET_NAMES = ['โบ้', 'ปุยฝ้าย', 'ถั่วแดง', 'มะม่วง', 'ซูชิ', 'ทอฟฟี่', 'ข้าวปั้น', 'เมฆ'];
+  var EGG_PRICE = 2000;
+  function petStage(p) {
+    if (!p || !p.hatched) return 0;
+    var st = 1; for (var i = 2; i < PET_STAGES.length; i++) if ((p.xp || 0) >= PET_STAGES[i].xp) st = i;
+    return st;
+  }
+  function petNext(p) { var st = petStage(p); return st >= 1 && st < 5 ? PET_STAGES[st + 1].xp - (p.xp || 0) : 0; }
+  function activePet(k) { var ps = k.pets || []; return ps.filter(function (p) { return p.id === k.petActive; })[0] || ps[0] || null; }
+  function petDraw(p) { return { sp: p.sp, stage: petStage(p), look: p.look || {}, mystery: !!(p.mystery && !p.hatched) }; }
+  function petPic(p, px, st) { var d = petDraw(p); if (st != null) d.stage = st; return '<img class="av" src="' + SK.petImg(d, px * 2) + '" width="' + px + '" height="' + px + '" alt="">'; }
+  function spName(p) { return p.mystery && !p.hatched ? 'ไข่ปริศนา' : (SK.PETS[p.sp] || {}).n || ''; }
+  function newPetId() { return 'p' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36); }
+  function newEgg(k, sp, name) {
+    k.pets = k.pets || [];
+    if (!sp) {   // ไข่ปริศนา: สุ่มชนิดที่ยังไม่มี
+      var have = k.pets.map(function (p) { return p.sp; }), all = Object.keys(SK.PETS);
+      var left = all.filter(function (x) { return have.indexOf(x) < 0; });
+      sp = pick(left.length ? left : all);
+    }
+    var p = { id: newPetId(), sp: sp, name: name || pick(PET_NAMES), xp: 0, hatched: false, mystery: !name, look: {}, at: Date.now() };
+    k.pets.push(p); if (!k.petActive) k.petActive = p.id;
+    return p;
+  }
+  var OLD_PET = { p_dog: 'dog', p_cat: 'cat', p_bun: 'bunny', p_chick: 'chick', p_turtle: 'turtle', p_panda: 'panda', p_fox: 'fox', p_peng: 'penguin', p_uni: 'unicorn', p_dragon: 'dragon' };
   function lookImg(kid, px, over, back) { return '<img class="av" src="' + SK.img(lookObj(kid, over), px * 2, back ? { back: true } : null) + '" width="' + px + '" height="' + px + '" alt="">'; }
   var DEFAULT_HERO = { Kaka: 'noob', Sheva: 'bacon' };
 
@@ -117,7 +153,11 @@
     [a, b].forEach(function (k) { for (var d in k.days || {}) { var x = r.days[d] = r.days[d] || { sec: 0, q: 0, ok: 0 }; ['sec', 'q', 'ok'].forEach(function (f) { x[f] = Math.max(x[f], k.days[d][f] || 0); }); } });
     if (a.pets || b.pets) {   // (เฟส 2) สัตว์เลี้ยง = รวมตาม id เอา XP มาก
       var pm = {};
-      [a, b].forEach(function (k) { (k.pets || []).forEach(function (p) { var o = pm[p.id]; if (!o || (p.xp || 0) > (o.xp || 0)) pm[p.id] = JSON.parse(JSON.stringify(p)); }); });
+      [a, b].forEach(function (k) { (k.pets || []).forEach(function (p) {
+        var o = pm[p.id], hatched = !!(p.hatched || (o && o.hatched));
+        if (!o || (p.xp || 0) > (o.xp || 0)) pm[p.id] = JSON.parse(JSON.stringify(p));
+        pm[p.id].hatched = hatched;
+      }); });
       r.pets = Object.keys(pm).map(function (id) { return pm[id]; });
     }
     for (var sl in r.look || {}) if (sl !== 'base' && r.look[sl] && r.inv.indexOf(r.look[sl]) < 0) delete r.look[sl];
@@ -151,6 +191,16 @@
     k.inv = (k.inv || []).filter(function (id) { return SK.IT[id]; });
     for (var sl in k.look) if (sl !== 'base' && k.look[sl] && k.inv.indexOf(k.look[sl]) < 0) delete k.look[sl];
     k.owned = (k.owned || []).filter(function (id) { return SK.BY[id]; });
+    // เฟส 2: สัตว์เลี้ยงอีโมจิที่เคยได้ → สัตว์เลี้ยงจริงขั้นทารก · ทำทุกครั้ง (นำเข้า save เก่าทีหลังก็ได้) · id คงที่ 'mig-<ชนิด>' กันซ้ำตอนซิงก์ 2 เครื่อง
+    if (k.inv.some(function (id) { return OLD_PET[id]; }) || (k.look && k.look.pet)) {
+      k.pets = k.pets || [];
+      k.inv.forEach(function (id) {
+        var sp = OLD_PET[id]; if (!sp || k.pets.some(function (p) { return p.sp === sp; })) return;
+        k.pets.push({ id: 'mig-' + sp, sp: sp, name: (SK.PETS[sp] || {}).n || 'น้อง', xp: 0, hatched: true, look: {}, at: Date.now() });
+      });
+      if (k.look && k.look.pet) delete k.look.pet;
+      if (k.pets.length && !k.petActive) k.petActive = k.pets[0].id;
+    }
     return k;
   }
   function today() { var d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
@@ -370,6 +420,7 @@
     if (view === 'levels') return renderLevels();
     if (view === 'shop') return renderShop();
     if (view === 'cards') return renderCards();
+    if (view === 'pets') return renderPets();
     if (view === 'parent') return renderParent();
   }
   function go(v) { view = v; render(); app.scrollTop = 0; }
@@ -432,7 +483,8 @@
     h += '<div class="adv"><div class="advcard" style="background:linear-gradient(160deg,' + th.c[0] + ',' + th.c[1] + ')">' +
       '<div class="advhero">' + lookImg(cur.kid, 150) + '<img class="av" width="120" height="120" src="' + bossImg(nx.boss ? 'mix' : nx.skey) + '"></div>' +
       '<div class="advn">ด่าน ' + n + '</div><div class="advwhat">' + what + '</div>' +
-      '<div class="advbtns"><button class="btn green advgo" data-act="advplay">▶ ผจญภัยต่อ!</button><button class="btn advdress" data-act="shop">👕 แต่งตัว<small>' + k.inv.length + '/' + SK.ITEMS.length + ' ชิ้น</small></button></div>' +
+      '<div class="advbtns"><button class="btn green advgo" data-act="advplay">▶ ผจญภัยต่อ!</button><button class="btn advdress" data-act="shop">👕 แต่งตัว<small>' + kidItems().filter(function (it) { return k.inv.indexOf(it.id) >= 0; }).length + '/' + kidItems().length + ' ชิ้น</small></button>' +
+      (activePet(k) ? '<button class="btn advpet" data-act="pets">' + petPic(activePet(k), 44) + '<span>' + esc(activePet(k).name) + '<small>' + PET_STAGES[petStage(activePet(k))].n + '</small></span></button>' : '') + '</div>' +
       '<div class="advsub">🎁 ผ่านด่าน = ได้ของแต่งตัว 1 ชิ้น · ' + (n % 5 === 0 ? '⚔️ ด่านบอสได้ของหายาก!' : toChest === 0 ? '💰 ด่านนี้ได้ของระดับตำนาน!' : 'อีก ' + toChest + ' ด่านถึงกล่องสมบัติ') + '</div></div>';
     // เส้นทาง: ด่านที่ผ่านมา 3 ด่าน → ด่านปัจจุบัน → ด่านข้างหน้า
     h += '<div class="trail">';
@@ -446,7 +498,65 @@
     }
     h += '</div><div class="advfoot"><button class="btn blue" data-act="practice">📚 ฝึกรายวิชา (เลือกวิชาเอง)</button></div></div>';
     app.innerHTML = h;
-    dailyGift();
+    if (!(k.pets || []).length) { if (!(S.settings.drive && drive.busy)) petStarter(); }   // รอซิงก์ก่อน กันเลือกซ้ำ 2 เครื่อง
+    else dailyGift();
+  }
+
+  // ---------- 🐾 เลือกสัตว์เลี้ยงตัวแรก ----------
+  function petStarter() {
+    modalMenu('<h2>🥚 เลือกสัตว์เลี้ยงตัวแรก!</h2><p class="q">เลือก 1 ตัว · จะได้ไข่มาฟัก แล้วเลี้ยงให้โตเรื่อย ๆ</p><div class="pstart">' +
+      SK.PET_STARTERS.map(function (sp) { return '<button data-sp="' + sp + '">' + '<img class="av" width="110" height="110" src="' + SK.petImg({ sp: sp, stage: 1 }, 220) + '"><b>' + esc(SK.PETS[sp].n) + '</b></button>'; }).join('') + '</div>');
+    menuModal.addEventListener('click', function (e) { var b = e.target.closest('[data-sp]'); if (b) { SFX.click(); petName(b.getAttribute('data-sp')); } });
+    speak('เลือกสัตว์เลี้ยงตัวแรกของหนูเลย', 'th');
+  }
+  function petName(sp, pet) {
+    var names = shuffle(PET_NAMES).slice(0, 6);
+    modalMenu('<div class="big"><img class="av" width="130" height="130" src="' + SK.petImg({ sp: sp, stage: 1 }, 260) + '"></div><h2>ตั้งชื่อให้น้อง' + esc(SK.PETS[sp].n) + '</h2>' +
+      '<div class="pnames">' + names.map(function (n) { return '<button data-nm="' + esc(n) + '">' + esc(n) + '</button>'; }).join('') + '</div>' +
+      '<p class="ex">หรือพิมพ์ชื่อเอง</p><input id="petnm" maxlength="12" value="' + esc(pet ? pet.name : '') + '" style="font-size:24px;width:220px;text-align:center;border-radius:14px;border:3px solid #c4b5fd;padding:6px">' +
+      '<div class="row"><button class="btn green" data-nm="*">ตกลง ✅</button></div>');
+    menuModal.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-nm]'); if (!b) return;
+      var nm = b.getAttribute('data-nm'); if (nm === '*') nm = (document.getElementById('petnm').value || '').trim();
+      if (!nm) { document.getElementById('petnm').focus(); return; }
+      var k = K(cur.kid);
+      if (pet) { pet.name = nm; save(); closeModal(); render(); return; }
+      var egg = newEgg(k, sp, nm); k.petActive = egg.id; save(); SFX.win();
+      modalMenu('<div class="big">' + petPic(egg, 140) + '</div><h2>ได้ไข่ของ “' + esc(nm) + '” แล้ว! 🥚</h2><p class="q">ชนะ 1 ด่าน ไข่จะฟักเป็นน้อง' + esc(SK.PETS[sp].n) + '<br>ตอบถูกทุกข้อ = น้องโตขึ้น 🐾</p><div class="row"><button class="btn green" data-close>ไปผจญภัยกัน!</button></div>', function () { render(); });
+      speak('ได้ไข่ของ ' + nm + ' แล้ว ชนะหนึ่งด่าน ไข่จะฟัก', 'th');
+    });
+  }
+
+  // ---------- 🏡 บ้านสัตว์เลี้ยง ----------
+  function renderPets() {
+    var k = K(cur.kid), pet = activePet(k), tab = cur.ptab || 'pets';
+    if (!pet) { go('adv'); return; }
+    var st = petStage(pet), nx = petNext(pet), rc = function (r) { return SK.RARITY[r].col; };
+    var prog = st === 0 ? 'ชนะ 1 ด่าน ไข่จะฟัก! 🥚' : st >= 5 ? '✨ โตเต็มที่แล้ว ร่างตำนาน!' : 'ตอบถูกอีก <b>' + nx + '</b> ข้อ → ' + PET_STAGES[st + 1].n;
+    var lo = st >= 1 ? PET_STAGES[st].xp : 0, hi = st >= 1 && st < 5 ? PET_STAGES[st + 1].xp : lo + 1, frac = st >= 5 ? 1 : st === 0 ? 0 : ((pet.xp || 0) - lo) / (hi - lo);
+    var h = topbar('🐾 บ้านสัตว์เลี้ยง', 'adv') + '<div class="closet"><div class="cprev pprev">' +
+      '<div class="cfig">' + petPic(pet, 230) + '</div><div class="pname">' + esc(pet.name) + ' <button class="btn small gray" data-act="petrename">✏️</button></div>' +
+      '<div class="pstage">' + spName(pet) + ' · ' + PET_STAGES[st].n + '</div><div class="pbar"><i style="width:' + Math.round(100 * frac) + '%"></i></div><div class="pprog">' + prog + '</div>' +
+      (st >= 2 ? '<div class="pshield">🛡️ พลังพิเศษ: กันหัวใจหาย 1 ครั้ง/ด่าน</div>' : '<div class="pshield off">🛡️ โตถึงขั้น “เด็ก” จะกันหัวใจได้</div>') + '</div>' +
+      '<div class="cright"><div class="ctabs"><button class="' + (tab === 'pets' ? 'on' : '') + '" data-act="ptab" data-tab="pets">🐾 สัตว์ของฉัน ' + k.pets.length + '</button>' +
+      SK.PET_SLOTS.map(function (sl) { return '<button class="' + (tab === sl.k ? 'on' : '') + '" data-act="ptab" data-tab="' + sl.k + '">' + sl.e + ' ' + sl.n + '</button>'; }).join('') + '</div><div class="cgrid">';
+    if (tab === 'pets') {
+      k.pets.forEach(function (p) {
+        var on = p.id === pet.id;
+        h += '<div class="citem' + (on ? ' on' : '') + '" data-act="petpick" data-id="' + p.id + '">' + petPic(p, 110) + '<b>' + esc(p.name) + '</b><small>' + spName(p) + ' · ' + PET_STAGES[petStage(p)].n + '</small>' + (on ? '<span class="pill">✅ พาไปเล่น</span>' : '') + '</div>';
+      });
+      h += '<div class="citem"><div class="lk" style="filter:none;opacity:1">🥚</div><b>ไข่ปริศนา</b><small>ได้ฟรีทุก 10 ด่านผจญภัย</small><button class="btn small' + (k.coins >= EGG_PRICE ? '' : ' gray') + '" data-act="buyegg">💎 ' + EGG_PRICE + '</button></div>';
+    } else {
+      var none = !(pet.look || {})[tab];
+      h += '<div class="citem' + (none ? ' on' : '') + '" data-act="pequip" data-slot="' + tab + '" data-id="">' + petPic({ sp: pet.sp, hatched: pet.hatched, xp: pet.xp, look: {} }, 110) + '<b>ไม่ใส่</b></div>';
+      SK.ITEMS.filter(function (it) { return it.slot === tab; }).forEach(function (it) {
+        var own = k.inv.indexOf(it.id) >= 0, on = (pet.look || {})[tab] === it.id, lk = {}; for (var x in pet.look || {}) lk[x] = pet.look[x]; lk[tab] = it.id;
+        if (own) h += '<div class="citem' + (on ? ' on' : '') + '" style="border-color:' + rc(it.r) + '" data-act="pequip" data-slot="' + tab + '" data-id="' + it.id + '">' + petPic({ sp: pet.sp, hatched: pet.hatched, xp: pet.xp, look: lk }, 110) +
+          '<b>' + esc(it.n) + '</b><span class="rar" style="background:' + rc(it.r) + '">' + SK.RARITY[it.r].n + '</span>' + (on ? '<span class="pill">✅ ใส่อยู่</span>' : '') + '</div>';
+        else h += '<div class="citem locked" style="border-color:' + rc(it.r) + '"><div class="lk">❓</div><b>???</b><span class="rar" style="background:' + rc(it.r) + '">' + SK.RARITY[it.r].n + '</span><small>🔒 ผ่านด่านเพื่อสุ่มได้</small></div>';
+      });
+    }
+    app.innerHTML = h + '</div></div></div>';
   }
 
   function dailyGift() {
@@ -501,15 +611,16 @@
     app.innerHTML = h;
   }
 
+  function kidItems() { return SK.ITEMS.filter(function (it) { return !it.retired && SK.SLOTS.some(function (sl) { return sl.k === it.slot && sl.k !== 'pet'; }); }); }
   function renderShop() {
     var k = K(cur.kid), tab = cur.tab || 'base', look = k.look;
     var rcol = function (r) { return SK.RARITY[r].col; };
     var h = topbar('👕 ห้องแต่งตัว', cur.shopBack || 'adv') + '<div class="closet"><div class="cprev">' +
       '<div class="cfig">' + lookImg(cur.kid, 240, null, cur.backView) + '</div>' +
       '<button class="btn small blue" data-act="turn">🔄 หมุนดู' + (cur.backView ? 'ด้านหน้า' : 'ด้านหลัง') + '</button>' +
-      '<div class="ccount">ของสะสม <b>' + k.inv.length + '</b> / ' + SK.ITEMS.length + ' ชิ้น</div>' +
+      '<div class="ccount">ของสะสม <b>' + kidItems().filter(function (it) { return k.inv.indexOf(it.id) >= 0; }).length + '</b> / ' + kidItems().length + ' ชิ้น</div>' +
       '<div class="clegend">' + ['c', 'r', 'e', 'l'].map(function (r) { return '<span style="background:' + rcol(r) + '">' + SK.RARITY[r].n + '</span>'; }).join('') + '</div></div>' +
-      '<div class="cright"><div class="ctabs">' + SK.SLOTS.map(function (sl) {
+      '<div class="cright"><div class="ctabs">' + SK.SLOTS.filter(function (sl) { return sl.k !== 'pet'; }).map(function (sl) {
         var n = sl.k === 'base' ? '' : ' <small>' + SK.ITEMS.filter(function (it) { return it.slot === sl.k && k.inv.indexOf(it.id) >= 0; }).length + '/' + SK.ITEMS.filter(function (it) { return it.slot === sl.k; }).length + '</small>';
         return '<button class="' + (tab === sl.k ? 'on' : '') + '" data-act="tab" data-tab="' + sl.k + '">' + sl.e + ' ' + sl.n + n + '</button>';
       }).join('') + '</div><div class="cgrid">';
@@ -523,7 +634,7 @@
     } else {
       var none = !look[tab];
       h += '<div class="citem' + (none ? ' on' : '') + '" data-act="equip" data-slot="' + tab + '" data-id="">' + lookImg(cur.kid, 110, (function () { var o = {}; o[tab] = null; return o; })()) + '<b>ไม่ใส่</b>' + (none ? '<span class="pill">✅</span>' : '') + '</div>';
-      SK.ITEMS.filter(function (it) { return it.slot === tab; }).forEach(function (it) {
+      SK.ITEMS.filter(function (it) { return it.slot === tab && !it.retired; }).forEach(function (it) {
         var own = k.inv.indexOf(it.id) >= 0, on = look[tab] === it.id, o = {}; o[tab] = it.id;
         if (own) h += '<div class="citem' + (on ? ' on' : '') + '" style="border-color:' + rcol(it.r) + '" data-act="equip" data-slot="' + tab + '" data-id="' + it.id + '">' + lookImg(cur.kid, 110, o, tab === 'back') +
           '<b>' + esc(it.n) + '</b><span class="rar" style="background:' + rcol(it.r) + '">' + SK.RARITY[it.r].n + '</span>' + (on ? '<span class="pill">✅ ใส่อยู่</span>' : '') + '</div>';
@@ -537,7 +648,7 @@
   var LOOT_W = { normal: { c: 70, r: 25, e: 5, l: 0 }, boss: { c: 0, r: 55, e: 37, l: 8 }, chest: { c: 0, r: 0, e: 45, l: 55 } };
   function rollLoot(kid, tier) {
     var k = K(kid), w = LOOT_W[tier] || LOOT_W.normal, pool = {}, tot = 0;
-    SK.ITEMS.forEach(function (it) { if (k.inv.indexOf(it.id) < 0) (pool[it.r] = pool[it.r] || []).push(it); });
+    SK.ITEMS.forEach(function (it) { if (!it.retired && k.inv.indexOf(it.id) < 0) (pool[it.r] = pool[it.r] || []).push(it); });
     var rs = Object.keys(pool);
     if (!rs.length) return null;
     var ws = rs.map(function (r) { return w[r] || 0; });
@@ -765,7 +876,7 @@
   app.addEventListener('click', function (e) {
     var t = e.target.closest('[data-act]'); if (!t) return;
     var act = t.getAttribute('data-act'); audio(); SFX.click();
-    if (act === 'kid') { cur.kid = t.getAttribute('data-kid'); go('adv'); driveSync(true); }
+    if (act === 'kid') { cur.kid = t.getAttribute('data-kid'); go('adv'); driveSync(true, function () { if (view === 'adv' && !menuModal && !G) render(); }); }
     else if (act === 'cloud') { driveSync(true, function (res, err) { if (err) modalMenu('<div class="big">☁️⚠️</div><h2>ซิงก์ไม่สำเร็จ</h2><p class="q">' + esc(err.message) + '</p><p class="ex">ลองใหม่อีกครั้ง หรือเช็กอินเทอร์เน็ต</p><div class="row"><button class="btn" data-close>ตกลง</button></div>'); }); }
     else if (act === 'driveon') { S.settings.drive = true; save(); driveLogin(true, function (ok) { if (ok) driveSync(false, function () { renderParent(); }); else renderParent(); }); }
     else if (act === 'driveoff') { S.settings.drive = false; localStorage.removeItem(TOK_KEY); save(); renderParent(); }
@@ -786,6 +897,17 @@
     }
     else if (act === 'wear') { var kw = K(cur.kid); kw.hero = kw.look.base = HEROES[+t.getAttribute('data-i')].id; save(); renderShop(); }
     else if (act === 'tab') { cur.tab = t.getAttribute('data-tab'); renderShop(); }
+    else if (act === 'pets') { cur.ptab = 'pets'; go('pets'); }
+    else if (act === 'ptab') { cur.ptab = t.getAttribute('data-tab'); renderPets(); }
+    else if (act === 'petpick') { K(cur.kid).petActive = t.getAttribute('data-id'); save(); SFX.pop(); renderPets(); }
+    else if (act === 'pequip') { var pp = activePet(K(cur.kid)), psl = t.getAttribute('data-slot'), pid = t.getAttribute('data-id'); pp.look = pp.look || {}; if (pid) pp.look[psl] = pid; else delete pp.look[psl]; save(); SFX.pop(); renderPets(); }
+    else if (act === 'petrename') { var pr = activePet(K(cur.kid)); petName(pr.sp, pr); }
+    else if (act === 'buyegg') {
+      var kb = K(cur.kid);
+      if (kb.coins < EGG_PRICE) { modalMenu('<div class="big">💎</div><h2>เพชรยังไม่พอ</h2><p class="q">ขาดอีก ' + (EGG_PRICE - kb.coins) + ' เพชร — หรือผจญภัยให้ครบทุก 10 ด่านได้ไข่ฟรี!</p><div class="row"><button class="btn" data-close>ไปเล่น!</button></div>'); return; }
+      kb.coins -= EGG_PRICE; var eg = newEgg(kb); kb.petActive = eg.id; save(); SFX.win(); renderPets();
+      modalMenu('<div class="big">' + petPic(eg, 140) + '</div><h2>ได้ไข่ปริศนา! 🥚</h2><p class="q">พาไปเล่นแล้วชนะ 1 ด่าน จะรู้ว่าเป็นตัวอะไร!</p><div class="row"><button class="btn green" data-close>เย่!</button></div>');
+    }
     else if (act === 'turn') { cur.backView = !cur.backView; renderShop(); }
     else if (act === 'equip') { var ke = K(cur.kid), sl = t.getAttribute('data-slot'), id = t.getAttribute('data-id'); if (id) ke.look[sl] = id; else delete ke.look[sl]; save(); SFX.pop(); renderShop(); }
     else if (act === 'sound') { S.settings.sound = !S.settings.sound; save(); renderHome(); }
@@ -897,6 +1019,7 @@
     g.maxHp = g.queue.reduce(function (s, it) { return s + (it.kind === 'blast' ? 2 : 1); }, 0);
     g.hearts = g.beg ? 4 : 3; g.maxHearts = g.hearts;
     g.coins = 0; g.mist = 0; g.okN = 0; g.combo = 0; g.missed = []; g.requeued = {};
+    g.petXp = 0; g.petGuard = petStage(activePet(K(kid))) >= 2;
     g.speed = g.beg ? 6 : 7.5; g.dist = 0; g.t = 0;
     g.player = { lane: 0, x: 0, jump: 0, jv: 0, stun: 0, run: 0, scale: 1, ts: 1 };
     g.morph = 0; g.morphUp = true;
@@ -988,7 +1111,7 @@
   Game.prototype.updHud = function () {
     var g = this, h = '';
     for (var i = 0; i < g.maxHearts; i++) h += i < g.hearts ? '❤️' : '🤍';
-    g.heartsEl.textContent = h;
+    g.heartsEl.textContent = h + (g.petGuard ? ' 🛡️' : '');
     var hp = g.hpLeft();
     g.hpEl.style.width = Math.max(0, Math.min(100, 100 * hp / g.maxHp)) + '%';
     g.coinEl.textContent = '💎 ' + g.coins;
@@ -1000,6 +1123,16 @@
     return hp;
   };
 
+  // 🛡️ สัตว์เลี้ยงตั้งแต่ขั้น "เด็ก" กันหัวใจหายได้ 1 ครั้ง/ด่าน (ยังต้องอ่านเฉลย + ข้อนั้นยังวนกลับมา)
+  Game.prototype.hurt = function () {
+    var g = this;
+    if (g.petGuard) {
+      g.petGuard = false; var pt = activePet(K(g.kid));
+      g.toast('🛡️ ' + (pt ? pt.name : 'น้อง') + ' ปกป้องหัวใจ!', 1500, '#0ea5e9'); tone(880, 0.2, 'triangle', 0.12); tone(1320, 0.25, 'triangle', 0.1, 0.12);
+      g.updHud(); return false;
+    }
+    g.hearts--; return true;
+  };
   Game.prototype.toast = function (txt, ms, color) {
     var t = document.createElement('div'); t.className = 'toast'; t.textContent = txt;
     if (color) t.style.textShadow = '0 4px 0 ' + color + ', 0 0 18px rgba(0,0,0,.35)';
@@ -1134,7 +1267,7 @@
     dr.q++; sr.q++;
     var px = g.W / 2 + g.player.x * g.laneW, py = g.groundY;
     if (lane === gt.right) {
-      dr.ok++; sr.ok++; g.okN++; g.combo++;
+      dr.ok++; sr.ok++; g.okN++; g.combo++; g.petXp++;
       var gain = 10 + Math.min(g.combo - 1, 5) * 2; g.coins += gain;
       SFX.good(); g.burst(px, py - 80, ['⭐', '✨', '🎉'], 14);
       g.toast(pick(['เยี่ยม!', 'ถูกต้อง!', 'สุดยอด!', 'เก่งมาก!', 'ว้าว!']) + (g.combo > 2 ? ' x' + g.combo : '') + ' +' + gain, 900, '#16a34a');
@@ -1145,7 +1278,7 @@
       g.cards.classList.add('hidden'); g.qbox.classList.add('hidden'); g.layoutHud();
       g.cooldown = 1.3; g.updHud(); save();
     } else {
-      g.combo = 0; g.mist++; g.hearts--; g.shake = 0.4; g.grow(false);
+      g.combo = 0; g.mist++; g.hurt(); g.shake = 0.4; g.grow(false);
       SFX.bad(); g.burst(px, py - 60, ['💥', '💢'], 8);
       var chosen = gt.labels[lane + 1];
       g.missed.push({ q: q.q, a: q.c[0], you: chosen });
@@ -1275,11 +1408,11 @@
     g.bubbles.forEach(function (b) { if (b.dead) return; var d = Math.hypot(b.x - x, b.y - y); if (d < b.r * 1.15 && d < bd) { bd = d; best = b; } });
     if (!best) return;
     if (best.yes) {
-      best.dead = true; g.blast.hit++; g.coins += 5; SFX.pop(); g.burst(best.x, best.y, ['✨', '⭐', '💎'], 10);
+      best.dead = true; g.blast.hit++; g.coins += 5; g.petXp++; SFX.pop(); g.burst(best.x, best.y, ['✨', '⭐', '💎'], 10);
       g.floatTxt(best.x, best.y, '+5', '#16a34a');
       g.player.ts = Math.min(1.6, g.player.ts + 0.03); g.morph = 0.3; g.morphUp = true;
     } else {
-      best.dead = true; best.bad = true; g.blast.bad++; g.mist++; g.hearts--; g.shake = 0.3; SFX.bad(); g.grow(false);
+      best.dead = true; best.bad = true; g.blast.bad++; g.mist++; g.hurt(); g.shake = 0.3; SFX.bad(); g.grow(false);
       g.burst(best.x, best.y, ['💢'], 6); g.floatTxt(best.x, best.y, '✖ ไม่ใช่!', '#dc2626');
       g.missed.push({ q: g.blast.s.rule, a: 'ไม่ต้องแตะ “' + best.t + '”', you: 'แตะ' });
       if (g.hearts <= 0) { g.updHud(); g.lose(); return; }
@@ -1331,9 +1464,23 @@
       var tier = g.adv ? (g.adv.n % 10 === 0 ? 'chest' : g.adv.boss ? 'boss' : 'normal') : (g.li === 'boss' ? 'boss' : 'normal');
       if (g.adv || prev === 0 || g.li === 'boss' || Math.random() < 0.35) { loot = rollLoot(g.kid, tier); if (!loot) { lootGem = 30; bonus += 30; } }
     }
+    var pet = activePet(k), petHtml = '', grewTo = -1, egg = null;
+    if (pet) {
+      var st0 = petStage(pet); pet.xp = (pet.xp || 0) + (g.petXp || 0);
+      if (won && !pet.hatched) pet.hatched = true;
+      var st1 = petStage(pet);
+      if (st1 > st0) grewTo = st1;
+      var nxx = petNext(pet);
+      petHtml = grewTo > 0
+        ? '<div class="petup"><div class="lnew">' + (st0 === 0 ? '🐣 ไข่ฟักแล้ว!' : '🎉 ' + esc(pet.name) + ' โตขึ้นแล้ว!') + '</div>' + petPic(pet, 120) +
+          '<div class="lname">' + esc(pet.name) + ' · ' + esc(spName(pet)) + ' ' + PET_STAGES[st1].n + '</div>' + (st1 === 2 ? '<p class="ex">🛡️ ได้พลังกันหัวใจ 1 ครั้ง/ด่าน!</p>' : '') + '</div>'
+        : '<div class="petline">' + petPic(pet, 44) + ' <b>' + esc(pet.name) + '</b> +' + (g.petXp || 0) + ' 🐾' + (petStage(pet) === 0 ? ' · ชนะด่านแล้วไข่จะฟัก' : nxx ? ' · อีก ' + nxx + ' ข้อถูกจะโต' : ' · ✨ ร่างตำนาน') + '</div>';
+    }
+    if (g.adv && won && g.adv.n % 10 === 0) { egg = newEgg(k); petHtml += '<div class="petline">🥚 <b>ได้ไข่ปริศนาใบใหม่!</b> ดูได้ที่บ้านสัตว์เลี้ยง 🏡</div>'; }
     k.coins += g.coins + bonus;
     g.recordTime(); save();
     if (won) SFX.win();
+    if (grewTo > 0) setTimeout(function () { SFX.win(); speak(grewTo === 1 ? 'ไข่ฟักแล้ว ' + pet.name + ' ออกมาแล้ว' : pet.name + ' โตขึ้นแล้ว', 'th'); }, 900);
     var lootHtml = loot ? '<div class="loot" style="--rc:' + SK.RARITY[loot.r].col + '"><div class="lbox">🎁</div></div>' : lootGem ? '<p class="q">🎉 สะสมของครบทุกชิ้นแล้ว! รับ 💎 +30 แทน</p>' : '';
     var miss = '';
     var seen = {};
@@ -1352,7 +1499,7 @@
         (chest ? '<p class="q" style="font-size:26px">🎁 เปิดกล่องสมบัติ! 💎 +' + chest + '</p>' : '') + '<p class="q">ตอบถูก ' + g.okN + ' ข้อ · 💎 +' + (g.coins + bonus) + '</p><p class="ex">💪 ตัวใหญ่ x' + g.player.scale.toFixed(1) + (sizeB ? ' → โบนัส 💎 +' + sizeB : '') + '</p>' + (stars < 3 ? '<p class="ex">ตอบถูกหมดไม่พลาดเลย = ⭐⭐⭐</p>' : '<p class="ex">เพอร์เฟกต์! ไม่พลาดสักข้อ 🎉</p>')
       : '<div class="big">💔</div><h2>หัวใจหมดแล้ว</h2><p class="q">ไม่เป็นไร! อ่านข้อที่พลาดแล้วลองใหม่นะ<br>💎 เก็บได้ ' + g.coins + ' เพชร</p>';
     var againBtn = g.adv ? (won ? '' : '<button class="btn" data-m="advagain">🔁 ลองใหม่</button>') : '<button class="btn" data-m="again">🔁 เล่นอีก</button>';
-    var m = g.modal(html + lootHtml + miss + '<div class="row"><button class="btn gray" data-m="map">🗺️ แผนที่</button>' + againBtn + nextBtn + '</div>', function (a) {
+    var m = g.modal(html + (petHtml && lootHtml ? '<div class="rewards">' + petHtml + lootHtml + '</div>' : petHtml + lootHtml) + miss + '<div class="row"><button class="btn gray" data-m="map">🗺️ แผนที่</button>' + againBtn + nextBtn + '</div>', function (a) {
       var kid = g.kid, subj = g.subj, li = g.li;
       g.quit();
       if (a === 'advnext' || a === 'advagain') { startAdv(); }
@@ -1682,7 +1829,7 @@
   // โหลดสคริปต์ Google ไว้ก่อน — ตอนลูกแตะชื่อจะเปิดหน้าต่างล็อกอินได้ทันที (iPad บล็อกถ้าเปิดช้ากว่าการแตะ)
   if (S.settings.drive) loadGis(function () {});
   setTimeout(function () { if (S.settings.drive) driveSync(false); }, 800);
-  window.__arcade = { syncAll: syncAll, syncKid: syncKid, game: function () { return G; }, S: function () { return S; }, save: save, mergeKid: mergeKid, exportObj: exportObj, importObj: importObj, migrate: migrate, K: K };
+  window.__arcade = { petStage: petStage, activePet: activePet, syncAll: syncAll, syncKid: syncKid, game: function () { return G; }, S: function () { return S; }, save: save, mergeKid: mergeKid, exportObj: exportObj, importObj: importObj, migrate: migrate, K: K };
 
   // =====================================================================
   //  🎮 มินิเกม (เฟส 1 แผน v2): 🧗 ปีนหอคอย · ⚔️ ตีบอส · 🃏 จับคู่การ์ด
@@ -1695,6 +1842,7 @@
     g.lvTitle = (adv ? 'ด่าน ' + adv.n + ' · ' : '') + (adv && adv.boss ? '⚔️ บอสใหญ่คละวิชา' : li === 'boss' ? '👑 บอสใหญ่ ' + subj.name : subj.emoji + ' ' + subj.name + ' — ' + subj.levels[li].title);
     g.hearts = g.beg ? 4 : 3; g.maxHearts = g.hearts;
     g.coins = 0; g.mist = 0; g.okN = 0; g.combo = 0; g.missed = []; g.requeued = {};
+    g.petXp = 0; g.petGuard = petStage(activePet(K(kid))) >= 2;
     g.player = { lane: 0, x: 0, run: 0, scale: 1, ts: 1 };
     g.morph = 0; g.morphUp = true; g.parts = []; g.t = 0; g.shake = 0; g.bossFlash = 0; g.cam = 0;
     g.startT = Date.now(); g.playSec = 0; g.state = 'intro'; g.gate = null; g.anim = null;
@@ -1765,7 +1913,7 @@
   Mini.prototype.updHud = function () {
     var g = this, h = '', i;
     if (g.mode === 'cards') { g.heartsEl.textContent = '❌ ' + (g.misses || 0); }
-    else { for (i = 0; i < g.maxHearts; i++) h += i < g.hearts ? '❤️' : '🤍'; g.heartsEl.textContent = h; }
+    else { for (i = 0; i < g.maxHearts; i++) h += i < g.hearts ? '❤️' : '🤍'; g.heartsEl.textContent = h + (g.petGuard ? ' 🛡️' : ''); }
     var frac, ic, txt;
     if (g.mode === 'tower') { frac = g.step / g.total; ic = '🧗'; txt = 'ชั้น ' + g.step + '/' + g.total; }
     else if (g.mode === 'boss') { frac = g.hp / g.total; ic = g.th.boss; txt = g.hp + '/' + g.total; }
@@ -1823,14 +1971,14 @@
     var sk = q.skey || g.subj.key, k = K(g.kid), dr = dayRec(k), sr = k.subj[sk] = k.subj[sk] || { q: 0, ok: 0 };
     dr.q++; sr.q++; g.scratchBtn.classList.add('hidden'); g.state = 'anim';
     if (ok) {
-      dr.ok++; sr.ok++; g.okN++; g.combo++;
+      dr.ok++; sr.ok++; g.okN++; g.combo++; g.petXp++;
       var gain = 10 + Math.min(g.combo - 1, 5) * 2; g.coins += gain;
       if (k.wrong[q.id]) { k.wrong[q.id].n = Math.max(0, k.wrong[q.id].n - 1); if (!k.wrong[q.id].n) delete k.wrong[q.id]; }
       SFX.good(); g.toast(pick(['เยี่ยม!', 'ถูกต้อง!', 'สุดยอด!', 'เก่งมาก!', 'ว้าว!']) + (g.combo > 2 ? ' x' + g.combo : '') + ' +' + gain, 900, '#16a34a');
       g.grow(true); g.updHud(); save();
       g.play(true, function () { g.gate = null; g.nextQ(); });
     } else {
-      g.combo = 0; g.mist++; g.hearts--; SFX.bad(); g.grow(false);
+      g.combo = 0; g.mist++; g.hurt(); SFX.bad(); g.grow(false);
       g.missed.push({ q: q.q, a: q.c[0], you: chosen });
       var w = k.wrong[q.id] = k.wrong[q.id] || { q: q.gen ? 'โจทย์สุ่ม เช่น ' + q.q : q.q, a: q.c[0], s: q.sname || g.subj.name, n: 0 };
       w.n++; w.last = chosen;
@@ -1920,7 +2068,7 @@
     var k = K(g.kid), sk = g.subj.key, dr = dayRec(k), sr = k.subj[sk] = k.subj[sk] || { q: 0, ok: 0 };
     if (a.p === bb.p) {
       ba.classList.add('ok'); b.classList.add('ok'); g.open = [];
-      g.matched++; g.okN++; g.coins += 6; dr.q++; dr.ok++; sr.q++; sr.ok++;
+      g.matched++; g.okN++; g.coins += 6; g.petXp++; dr.q++; dr.ok++; sr.q++; sr.ok++;
       SFX.good(); g.player.ts = Math.min(1.6, g.player.ts + 0.05); g.morph = 0.4; g.morphUp = true;
       var r = b.getBoundingClientRect(); g.burst(r.left + r.width / 2, r.top + r.height / 2, ['✨', '⭐'], 8); g.floatTxt(r.left + r.width / 2, r.top, '+6', '#16a34a');
       var pr = g.rounds[g.round][a.p];

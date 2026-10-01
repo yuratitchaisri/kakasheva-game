@@ -121,18 +121,160 @@
     { id: 'w_angel', slot: 'back', n: 'ปีกนางฟ้า', r: 'e', b: 'wings', ws: 'angel', c: '#FFFFFF' },
     { id: 'w_dragon', slot: 'back', n: 'ปีกมังกร', r: 'l', b: 'wings', ws: 'dragon', c: '#DC2626' },
     // สัตว์เลี้ยง
-    { id: 'p_dog', slot: 'pet', n: 'น้องหมา', r: 'c', pet: '🐶' },
-    { id: 'p_cat', slot: 'pet', n: 'น้องแมว', r: 'c', pet: '🐱' },
-    { id: 'p_bun', slot: 'pet', n: 'กระต่าย', r: 'c', pet: '🐰' },
-    { id: 'p_chick', slot: 'pet', n: 'ลูกเจี๊ยบ', r: 'c', pet: '🐥' },
-    { id: 'p_turtle', slot: 'pet', n: 'เต่าน้อย', r: 'r', pet: '🐢' },
-    { id: 'p_panda', slot: 'pet', n: 'แพนด้า', r: 'r', pet: '🐼' },
-    { id: 'p_fox', slot: 'pet', n: 'จิ้งจอก', r: 'r', pet: '🦊' },
-    { id: 'p_peng', slot: 'pet', n: 'เพนกวิน', r: 'e', pet: '🐧' },
-    { id: 'p_uni', slot: 'pet', n: 'ยูนิคอร์น', r: 'l', pet: '🦄' },
-    { id: 'p_dragon', slot: 'pet', n: 'มังกรน้อย', r: 'l', pet: '🐲' }
+    { id: 'p_dog', slot: 'pet', retired: true, n: 'น้องหมา', r: 'c', pet: '🐶' },
+    { id: 'p_cat', slot: 'pet', retired: true, n: 'น้องแมว', r: 'c', pet: '🐱' },
+    { id: 'p_bun', slot: 'pet', retired: true, n: 'กระต่าย', r: 'c', pet: '🐰' },
+    { id: 'p_chick', slot: 'pet', retired: true, n: 'ลูกเจี๊ยบ', r: 'c', pet: '🐥' },
+    { id: 'p_turtle', slot: 'pet', retired: true, n: 'เต่าน้อย', r: 'r', pet: '🐢' },
+    { id: 'p_panda', slot: 'pet', retired: true, n: 'แพนด้า', r: 'r', pet: '🐼' },
+    { id: 'p_fox', slot: 'pet', retired: true, n: 'จิ้งจอก', r: 'r', pet: '🦊' },
+    { id: 'p_peng', slot: 'pet', retired: true, n: 'เพนกวิน', r: 'e', pet: '🐧' },
+    { id: 'p_uni', slot: 'pet', retired: true, n: 'ยูนิคอร์น', r: 'l', pet: '🦄' },
+    { id: 'p_dragon', slot: 'pet', retired: true, n: 'มังกรน้อย', r: 'l', pet: '🐲' }
   ];
+  // ---------- ของแต่งตัวสัตว์เลี้ยง (เฟส 2) — สุ่มได้จากกล่องรางวัลเหมือนของเด็ก ----------
+  ITEMS.push(
+    { id: 'pt_party', slot: 'phat', n: 'หมวกปาร์ตี้น้อง', r: 'c', ph: 'party', c: '#F472B6', since: 3 },
+    { id: 'pt_cap', slot: 'phat', n: 'หมวกแก๊ปน้อง', r: 'c', ph: 'cap', c: '#2563EB', since: 3 },
+    { id: 'pt_flower', slot: 'phat', n: 'มงกุฎดอกไม้', r: 'r', ph: 'flower', c: '#F9A8D4', since: 3 },
+    { id: 'pt_crown', slot: 'phat', n: 'มงกุฎน้อย', r: 'e', ph: 'crown', c: '#FACC15', since: 3 },
+    { id: 'pt_halo', slot: 'phat', n: 'วงแหวนเทวดาน้อย', r: 'l', ph: 'halo', c: '#FDE047', since: 3 },
+    { id: 'pn_bow', slot: 'pneck', n: 'โบว์แดง', r: 'c', pn: 'bow', c: '#EF4444', since: 3 },
+    { id: 'pn_bell', slot: 'pneck', n: 'ปลอกคอกระดิ่ง', r: 'c', pn: 'bell', c: '#2563EB', since: 3 },
+    { id: 'pn_scarf', slot: 'pneck', n: 'ผ้าพันคอ', r: 'r', pn: 'scarf', c: '#22C55E', since: 3 },
+    { id: 'pn_medal', slot: 'pneck', n: 'เหรียญทอง', r: 'e', pn: 'medal', c: '#FACC15', since: 3 },
+    { id: 'pb_cape', slot: 'pback', n: 'ผ้าคลุมน้อง', r: 'c', b: 'cape', c: '#7C3AED', since: 3 },
+    { id: 'pb_bfly', slot: 'pback', n: 'ปีกผีเสื้อน้อง', r: 'r', b: 'wings', ws: 'butterfly', c: '#93C5FD', since: 3 },
+    { id: 'pb_angel', slot: 'pback', n: 'ปีกนางฟ้าน้อง', r: 'e', b: 'wings', ws: 'angel', c: '#FFFFFF', since: 3 },
+    { id: 'pb_dragon', slot: 'pback', n: 'ปีกมังกรน้อง', r: 'l', b: 'wings', ws: 'dragon', c: '#7C3AED', since: 3 },
+    { id: 'pg_round', slot: 'pglass', n: 'แว่นกลมน้อง', r: 'c', pg: 'round', since: 3 },
+    { id: 'pg_shades', slot: 'pglass', n: 'แว่นดำน้อง', r: 'r', pg: 'shades', since: 3 },
+    { id: 'pg_heart', slot: 'pglass', n: 'แว่นหัวใจ', r: 'e', pg: 'heart', since: 3 }
+  );
+  var PET_SLOTS = [{ k: 'phat', n: 'หมวก', e: '🎩' }, { k: 'pneck', n: 'คอ', e: '🎀' }, { k: 'pback', n: 'หลัง', e: '🦋' }, { k: 'pglass', n: 'แว่น', e: '🕶️' }];
   var IT = {}; ITEMS.forEach(function (i) { IT[i.id] = i; });
+
+  // ---------- สัตว์เลี้ยงบล็อก (เฟส 2) — 10 ชนิด · ขั้น 0 ไข่ · 1 ทารก · 2 เด็ก · 3 วัยรุ่น · 4 โตเต็มวัย · 5 ตำนาน ----------
+  var PETS = {
+    dog: { n: 'หมา', c: '#C08552', b: '#F3D9B1', ear: 'flop', ec: '#8B5A2B', face: 'snout', tail: 'short' },
+    cat: { n: 'แมว', c: '#F4A261', b: '#FDE2C4', ear: 'point', ec: '#E76F51', face: 'cat', tail: 'long' },
+    bunny: { n: 'กระต่าย', c: '#F1F5F9', b: '#FFFFFF', ear: 'long', ec: '#F9A8D4', face: 'cat', tail: 'puff' },
+    panda: { n: 'แพนด้า', c: '#FFFFFF', b: '#FFFFFF', ear: 'round', ec: '#1F2937', face: 'panda', tail: 'none', feet: '#1F2937' },
+    dragon: { n: 'มังกร', c: '#4ADE80', b: '#FEF08A', ear: 'horn', ec: '#FACC15', face: 'snout', tail: 'dragon', wing: '#16A34A' },
+    unicorn: { n: 'ยูนิคอร์น', c: '#FFFFFF', b: '#FCE7F3', ear: 'point', ec: '#F9A8D4', face: 'snout', tail: 'rainbow', horn: '#FACC15', mane: true },
+    fox: { n: 'จิ้งจอก', c: '#F97316', b: '#FFF7ED', ear: 'point', ec: '#7C2D12', face: 'snout', tail: 'fox' },
+    penguin: { n: 'เพนกวิน', c: '#1F2937', b: '#FFFFFF', ear: 'none', face: 'beak', tail: 'none', feet: '#F59E0B' },
+    chick: { n: 'ลูกเจี๊ยบ', c: '#FDE047', b: '#FEF9C3', ear: 'tuft', ec: '#EAB308', face: 'beak', tail: 'none', feet: '#F59E0B' },
+    turtle: { n: 'เต่า', c: '#A3E635', b: '#ECFCCB', ear: 'none', face: 'smile', tail: 'none', shell: '#3F6212' }
+  };
+  var PET_STARTERS = ['dog', 'cat', 'bunny', 'panda', 'dragon', 'unicorn'];
+  var PET_H = [1.7, 1.5, 1.9, 2.3, 2.7, 3.0];   // ความสูงสัตว์ข้างตัวเด็ก (หน่วย u ของเด็ก) ตามขั้น
+  function drawPet(c, P, x, foot, h, o) {
+    o = o || {}; var sp = PETS[P.sp] || PETS.dog, st = P.stage || 0, L = P.look || {};
+    c.save(); c.lineJoin = 'round'; c.lineCap = 'round';
+    if (o.run != null) foot -= Math.abs(Math.sin(o.run * 1.3)) * h * 0.1;
+    if (st === 0) {   // 🥚 ไข่
+      var ew = h * 0.62, eh = h * 0.8, ey = foot - eh / 2;
+      c.fillStyle = P.mystery ? '#FDF4FF' : '#FFFBEB'; c.beginPath(); c.ellipse(x, ey, ew / 2, eh / 2, 0, 0, 7); c.fill();
+      c.lineWidth = Math.max(1, h * 0.03); c.strokeStyle = 'rgba(0,0,0,.25)'; c.stroke();
+      var spot = P.mystery ? '#C084FC' : (sp.c === '#FFFFFF' || sp.c === '#F1F5F9') ? '#F9A8D4' : sp.c;
+      c.fillStyle = spot;
+      [[-0.2, -0.15, 0.1], [0.18, 0.05, 0.085], [-0.05, 0.25, 0.075], [0.12, -0.3, 0.06]].forEach(function (q) { c.beginPath(); c.arc(x + q[0] * ew * 1.2, ey + q[1] * eh, q[2] * h, 0, 7); c.fill(); });
+      if (P.mystery) { c.fillStyle = '#7C3AED'; c.font = 'bold ' + h * 0.3 + 'px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('?', x, ey); }
+      if (P.crack) { c.strokeStyle = '#78350F'; c.lineWidth = Math.max(1, h * 0.025); c.beginPath(); c.moveTo(x - ew * 0.32, ey - eh * 0.04); c.lineTo(x - ew * 0.12, ey + eh * 0.06); c.lineTo(x + ew * 0.05, ey - eh * 0.08); c.lineTo(x + ew * 0.28, ey + eh * 0.05); c.stroke(); }
+      c.restore(); return;
+    }
+    var hr = [0, 0.62, 0.56, 0.53, 0.5, 0.5][st];
+    var hs = h * hr, bh = h - hs * 0.85, bw = hs * 0.82, by = foot - bh, hy = by - hs * 0.85, hx = x - hs / 2;
+    var line = (sp.c === '#FFFFFF' || sp.c === '#F1F5F9') ? 'rgba(0,0,0,.18)' : null;
+    if (st >= 5) {   // ✨ ร่างตำนาน: รัศมีทอง
+      var gr = c.createRadialGradient(x, foot - h * 0.5, h * 0.1, x, foot - h * 0.5, h * 0.75);
+      gr.addColorStop(0, 'rgba(253,224,71,.55)'); gr.addColorStop(1, 'rgba(253,224,71,0)');
+      c.fillStyle = gr; c.beginPath(); c.arc(x, foot - h * 0.5, h * 0.75, 0, 7); c.fill();
+    }
+    var bk = IT[L.pback];
+    if (bk) backItem(c, bk, x, by - hs * 0.15, bw / 2.1, false, o.run != null);
+    else if (st >= 5 || (sp.wing && st >= 3)) backItem(c, { b: 'wings', ws: st >= 5 ? 'angel' : 'dragon', c: st >= 5 ? '#FDE68A' : sp.wing }, x, by - hs * 0.15, bw / 2.4, false, false);
+    petTail(c, sp, x + bw * 0.42, by + bh * 0.45, hs);
+    if (sp.shell) rr(c, x - bw * 0.78, by - hs * 0.05, bw * 1.56, bh * 0.92, bw * 0.45, sp.shell);
+    var fc = sp.feet || shade(sp.c, 0.82);
+    rr(c, x - bw * 0.44, foot - hs * 0.2, bw * 0.36, hs * 0.2, hs * 0.07, fc); rr(c, x + bw * 0.08, foot - hs * 0.2, bw * 0.36, hs * 0.2, hs * 0.07, fc);
+    rr(c, x - bw / 2, by, bw, bh - hs * 0.12, bw * 0.32, sp.c);
+    if (line) { c.strokeStyle = line; c.lineWidth = Math.max(1, hs * 0.03); c.stroke(); }
+    rr(c, x - bw * 0.3, by + bh * 0.12, bw * 0.6, bh * 0.58, bw * 0.25, sp.b);
+    petEars(c, sp, hx, hy, hs);
+    if (sp.mane) { ['#F472B6', '#FACC15', '#60A5FA', '#A78BFA'].forEach(function (mc, i) { rr(c, hx - hs * 0.08 + i * hs * 0.1, hy - hs * 0.1 + i * hs * 0.05, hs * 0.22, hs * 0.5, hs * 0.1, mc); }); }
+    rr(c, hx, hy, hs, hs, hs * 0.3, sp.c);
+    if (line) { c.strokeStyle = line; c.lineWidth = Math.max(1, hs * 0.03); c.stroke(); }
+    if (sp.ear === 'horn') { c.fillStyle = sp.ec; [-1, 1].forEach(function (sd) { c.beginPath(); c.moveTo(x + sd * hs * 0.32, hy + hs * 0.05); c.lineTo(x + sd * hs * 0.38, hy - hs * 0.28); c.lineTo(x + sd * hs * 0.18, hy + hs * 0.05); c.fill(); }); }
+    if (sp.horn) { c.fillStyle = sp.horn; c.beginPath(); c.moveTo(x - hs * 0.09, hy + hs * 0.04); c.lineTo(x, hy - hs * 0.42); c.lineTo(x + hs * 0.09, hy + hs * 0.04); c.fill(); }
+    petFace(c, sp, x, hy, hs);
+    var pg = IT[L.pglass]; if (pg) petGlasses(c, pg, x, hy, hs);
+    var pn = IT[L.pneck]; if (pn) petNeck(c, pn, x, by, bw, hs);
+    var ph = IT[L.phat]; if (ph) petHat(c, ph, x, hx, hy, hs);
+    c.restore();
+  }
+  function petEars(c, sp, hx, hy, hs) {
+    var e = sp.ear, ec = sp.ec;
+    if (e === 'flop') { rr(c, hx - hs * 0.14, hy + hs * 0.06, hs * 0.3, hs * 0.6, hs * 0.14, ec); rr(c, hx + hs * 0.84, hy + hs * 0.06, hs * 0.3, hs * 0.6, hs * 0.14, ec); }
+    else if (e === 'point') { [[hx + hs * 0.05, 1], [hx + hs * 0.65, 1]].forEach(function (q) { c.fillStyle = sp.c; c.beginPath(); c.moveTo(q[0], hy + hs * 0.2); c.lineTo(q[0] + hs * 0.15, hy - hs * 0.3); c.lineTo(q[0] + hs * 0.3, hy + hs * 0.2); c.fill(); c.fillStyle = ec; c.beginPath(); c.moveTo(q[0] + hs * 0.08, hy + hs * 0.12); c.lineTo(q[0] + hs * 0.15, hy - hs * 0.14); c.lineTo(q[0] + hs * 0.22, hy + hs * 0.12); c.fill(); }); }
+    else if (e === 'long') { [hx + hs * 0.12, hx + hs * 0.64].forEach(function (ex) { rr(c, ex, hy - hs * 0.75, hs * 0.24, hs * 0.95, hs * 0.12, sp.c); rr(c, ex + hs * 0.06, hy - hs * 0.65, hs * 0.12, hs * 0.75, hs * 0.06, ec); }); }
+    else if (e === 'round') { c.fillStyle = ec; [hx + hs * 0.12, hx + hs * 0.88].forEach(function (ex) { c.beginPath(); c.arc(ex, hy + hs * 0.08, hs * 0.17, 0, 7); c.fill(); }); }
+    else if (e === 'tuft') { c.fillStyle = ec; [-0.08, 0.04].forEach(function (d) { c.beginPath(); c.moveTo(hx + hs * (0.45 + d), hy + hs * 0.05); c.lineTo(hx + hs * (0.5 + d), hy - hs * 0.22); c.lineTo(hx + hs * (0.57 + d), hy + hs * 0.05); c.fill(); }); }
+  }
+  function petFace(c, sp, x, hy, hs) {
+    var ey = hy + hs * 0.46, ex = hs * 0.2;
+    if (sp.face === 'panda') { c.fillStyle = '#1F2937'; [-1, 1].forEach(function (sd) { c.beginPath(); c.ellipse(x + sd * ex, ey + hs * 0.02, hs * 0.13, hs * 0.16, sd * 0.4, 0, 7); c.fill(); }); }
+    [-1, 1].forEach(function (sd) {
+      c.fillStyle = sp.face === 'panda' ? '#FFFFFF' : '#111827'; c.beginPath(); c.ellipse(x + sd * ex, ey, hs * 0.065, hs * 0.09, 0, 0, 7); c.fill();
+      c.fillStyle = sp.face === 'panda' ? '#111827' : '#FFFFFF'; c.beginPath(); c.arc(x + sd * ex + hs * 0.02, ey - hs * 0.03, hs * 0.025, 0, 7); c.fill();
+      c.fillStyle = 'rgba(244,114,182,.45)'; c.beginPath(); c.arc(x + sd * hs * 0.33, ey + hs * 0.16, hs * 0.07, 0, 7); c.fill();
+    });
+    var my = hy + hs * 0.7;
+    if (sp.face === 'beak') { c.fillStyle = '#F59E0B'; c.beginPath(); c.moveTo(x - hs * 0.11, my - hs * 0.05); c.lineTo(x + hs * 0.11, my - hs * 0.05); c.lineTo(x, my + hs * 0.1); c.fill(); return; }
+    if (sp.face === 'snout') { c.fillStyle = sp.b; c.beginPath(); c.ellipse(x, my, hs * 0.18, hs * 0.12, 0, 0, 7); c.fill(); }
+    c.fillStyle = sp.face === 'cat' ? '#F472B6' : '#111827'; c.beginPath(); c.ellipse(x, my - hs * 0.04, hs * 0.05, hs * 0.035, 0, 0, 7); c.fill();
+    c.strokeStyle = '#111827'; c.lineWidth = Math.max(1, hs * 0.03);
+    c.beginPath(); c.arc(x - hs * 0.05, my + hs * 0.01, hs * 0.05, 0.2, Math.PI - 0.2); c.stroke();
+    c.beginPath(); c.arc(x + hs * 0.05, my + hs * 0.01, hs * 0.05, 0.2, Math.PI - 0.2); c.stroke();
+    if (sp.face === 'cat') { c.lineWidth = Math.max(1, hs * 0.015); [-1, 1].forEach(function (sd) { for (var i = 0; i < 2; i++) { c.beginPath(); c.moveTo(x + sd * hs * 0.14, my - hs * 0.01 + i * hs * 0.05); c.lineTo(x + sd * hs * 0.4, my - hs * 0.04 + i * hs * 0.08); c.stroke(); } }); }
+  }
+  function petTail(c, sp, tx, ty, hs) {
+    var t = sp.tail; c.lineWidth = hs * 0.14;
+    if (t === 'short') rr(c, tx, ty - hs * 0.2, hs * 0.14, hs * 0.26, hs * 0.07, sp.c);
+    else if (t === 'long') { c.strokeStyle = sp.c; c.beginPath(); c.moveTo(tx, ty); c.quadraticCurveTo(tx + hs * 0.45, ty - hs * 0.05, tx + hs * 0.35, ty - hs * 0.5); c.stroke(); }
+    else if (t === 'puff') { c.fillStyle = '#FFFFFF'; c.beginPath(); c.arc(tx + hs * 0.08, ty, hs * 0.13, 0, 7); c.fill(); c.strokeStyle = 'rgba(0,0,0,.15)'; c.lineWidth = 1; c.stroke(); }
+    else if (t === 'fox') { c.fillStyle = sp.c; c.beginPath(); c.ellipse(tx + hs * 0.25, ty - hs * 0.2, hs * 0.16, hs * 0.36, 0.6, 0, 7); c.fill(); c.fillStyle = '#FFFFFF'; c.beginPath(); c.ellipse(tx + hs * 0.42, ty - hs * 0.45, hs * 0.08, hs * 0.12, 0.6, 0, 7); c.fill(); }
+    else if (t === 'dragon') { c.strokeStyle = sp.c; c.beginPath(); c.moveTo(tx, ty); c.quadraticCurveTo(tx + hs * 0.4, ty + hs * 0.1, tx + hs * 0.5, ty - hs * 0.3); c.stroke(); c.fillStyle = sp.ec; c.beginPath(); c.moveTo(tx + hs * 0.42, ty - hs * 0.28); c.lineTo(tx + hs * 0.62, ty - hs * 0.42); c.lineTo(tx + hs * 0.55, ty - hs * 0.2); c.fill(); }
+    else if (t === 'rainbow') { ['#F472B6', '#FACC15', '#60A5FA'].forEach(function (rc, i) { c.strokeStyle = rc; c.lineWidth = hs * 0.08; c.beginPath(); c.moveTo(tx, ty + i * hs * 0.06); c.quadraticCurveTo(tx + hs * 0.45, ty + i * hs * 0.06, tx + hs * 0.38, ty - hs * 0.4 + i * hs * 0.06); c.stroke(); }); }
+  }
+  function petGlasses(c, it, x, hy, hs) {
+    var ey = hy + hs * 0.46, ex = hs * 0.2;
+    if (it.pg === 'round') { c.strokeStyle = '#111827'; c.lineWidth = Math.max(1, hs * 0.035); [-1, 1].forEach(function (sd) { c.beginPath(); c.arc(x + sd * ex, ey, hs * 0.12, 0, 7); c.stroke(); }); c.beginPath(); c.moveTo(x - ex + hs * 0.12, ey); c.lineTo(x + ex - hs * 0.12, ey); c.stroke(); }
+    else if (it.pg === 'shades') { rr(c, x - hs * 0.38, ey - hs * 0.1, hs * 0.76, hs * 0.2, hs * 0.06, '#111827'); }
+    else if (it.pg === 'heart') { c.fillStyle = '#EC4899'; [-1, 1].forEach(function (sd) { var cx = x + sd * ex, cy = ey; c.beginPath(); c.moveTo(cx, cy + hs * 0.12); c.bezierCurveTo(cx - hs * 0.2, cy, cx - hs * 0.1, cy - hs * 0.14, cx, cy - hs * 0.04); c.bezierCurveTo(cx + hs * 0.1, cy - hs * 0.14, cx + hs * 0.2, cy, cx, cy + hs * 0.12); c.fill(); }); }
+  }
+  function petNeck(c, it, x, by, bw, hs) {
+    var ny = by + hs * 0.04;
+    if (it.pn === 'bow') { c.fillStyle = it.c; c.beginPath(); c.moveTo(x, ny); c.lineTo(x - hs * 0.22, ny - hs * 0.12); c.lineTo(x - hs * 0.22, ny + hs * 0.12); c.fill(); c.beginPath(); c.moveTo(x, ny); c.lineTo(x + hs * 0.22, ny - hs * 0.12); c.lineTo(x + hs * 0.22, ny + hs * 0.12); c.fill(); c.beginPath(); c.arc(x, ny, hs * 0.06, 0, 7); c.fill(); }
+    else if (it.pn === 'bell') { rr(c, x - bw * 0.45, ny - hs * 0.04, bw * 0.9, hs * 0.09, hs * 0.04, it.c); c.fillStyle = '#FACC15'; c.beginPath(); c.arc(x, ny + hs * 0.09, hs * 0.07, 0, 7); c.fill(); }
+    else if (it.pn === 'scarf') { rr(c, x - bw * 0.48, ny - hs * 0.05, bw * 0.96, hs * 0.13, hs * 0.06, it.c); rr(c, x + bw * 0.12, ny, hs * 0.12, hs * 0.32, hs * 0.05, shade(it.c, 0.85)); }
+    else if (it.pn === 'medal') { c.strokeStyle = '#2563EB'; c.lineWidth = hs * 0.05; c.beginPath(); c.moveTo(x - bw * 0.3, ny - hs * 0.05); c.lineTo(x, ny + hs * 0.12); c.lineTo(x + bw * 0.3, ny - hs * 0.05); c.stroke(); c.fillStyle = it.c; c.beginPath(); c.arc(x, ny + hs * 0.17, hs * 0.09, 0, 7); c.fill(); star5(c, x, ny + hs * 0.17, hs * 0.05, '#FFFFFF'); }
+  }
+  function petHat(c, it, x, hx, hy, hs) {
+    var u = hs / 1.25;
+    if (it.ph === 'party' || it.ph === 'halo') return newHat(c, it.ph, it.c, hx, hy, hs, hs, u, x);
+    if (it.ph === 'cap') { rr(c, hx, hy - hs * 0.08, hs, hs * 0.32, hs * 0.14, it.c); rr(c, hx + hs * 0.5, hy + hs * 0.16, hs * 0.6, hs * 0.1, hs * 0.05, shade(it.c, 0.8)); return; }
+    if (it.ph === 'crown') { c.fillStyle = it.c; c.beginPath(); c.moveTo(hx + hs * 0.15, hy + hs * 0.05); c.lineTo(hx + hs * 0.15, hy - hs * 0.3); c.lineTo(hx + hs * 0.33, hy - hs * 0.1); c.lineTo(x, hy - hs * 0.38); c.lineTo(hx + hs * 0.67, hy - hs * 0.1); c.lineTo(hx + hs * 0.85, hy - hs * 0.3); c.lineTo(hx + hs * 0.85, hy + hs * 0.05); c.closePath(); c.fill(); return; }
+    if (it.ph === 'flower') { ['#F472B6', '#FDE047', '#A78BFA', '#FB7185', '#60A5FA'].forEach(function (fc, i) { var fx = hx + hs * (0.1 + i * 0.2); c.fillStyle = fc; c.beginPath(); c.arc(fx, hy + hs * 0.02, hs * 0.1, 0, 7); c.fill(); c.fillStyle = '#FDE68A'; c.beginPath(); c.arc(fx, hy + hs * 0.02, hs * 0.035, 0, 7); c.fill(); }); }
+  }
+  function petImg(P, px) {
+    var key = 'pet:' + JSON.stringify(P) + '@' + px;
+    if (cache[key]) return cache[key];
+    var cv = document.createElement('canvas'); cv.width = px; cv.height = px;
+    drawPet(cv.getContext('2d'), P, px / 2, px * 0.96, px * 0.8, {});
+    return (cache[key] = cv.toDataURL());
+  }
 
   // รวมตัวละครพื้นฐาน + ของที่ใส่ → object ที่ draw() ใช้วาด
   function compose(look) {
@@ -349,7 +491,8 @@
     if (NEW_HATS.indexOf(hat) >= 0) newHat(c, hat, hcol, hx, headY, headW, headH, u, x);
     if (!back && s.facc) faceAcc(c, s.facc, x, headY, headW, headH, u, hx);
     if (s.hand) weapon(c, s.hand, back ? x - 2 * u + lw / 2 : x + 2 * u - lw / 2, torsoY + 2 * u + (back ? armL : armR) - u * 0.1, u, back);
-    if (s.pet && !o.noPet) { c.font = (u * 1.4) + 'px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'alphabetic'; c.fillStyle = '#000'; c.fillText(s.pet, x + 2.9 * u, footY - Math.abs(Math.sin((o.run || 0) * 1.3)) * u * 0.35); }
+    if (s.petObj && !o.noPet) { var pst = s.petObj.stage || 0, phh = u * PET_H[pst]; drawPet(c, s.petObj, x + 2.3 * u + phh * 0.35, footY, phh, { run: o.run }); }
+    else if (s.pet && !o.noPet) { c.font = (u * 1.4) + 'px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'alphabetic'; c.fillStyle = '#000'; c.fillText(s.pet, x + 2.9 * u, footY - Math.abs(Math.sin((o.run || 0) * 1.3)) * u * 0.35); }
     if (!back && ex.indexOf('band') >= 0) { c.fillStyle = '#DC2626'; c.fillRect(hx - u * 0.1, headY + u * 0.08, headW + u * 0.2, u * 0.16); }
     if (!back && ex.indexOf('patch') >= 0) { c.fillStyle = '#111'; c.fillRect(hx + headW * 0.58, headY + headH * 0.3, u * 0.3, u * 0.26); c.fillRect(hx, headY + headH * 0.28, headW, u * 0.05); }
     if (!back && ex.indexOf('shades') >= 0) { c.fillStyle = '#111'; rr(c, hx + u * 0.08, headY + headH * 0.3, headW - u * 0.16, u * 0.28, u * 0.08, '#111'); c.fillStyle = 'rgba(255,255,255,.5)'; c.fillRect(hx + u * 0.2, headY + headH * 0.33, u * 0.18, u * 0.06); }
@@ -383,10 +526,10 @@
     if (cache[key]) return cache[key];
     var cv = document.createElement('canvas'); cv.width = px; cv.height = px;
     var c = cv.getContext('2d'), obj = typeof id === 'string' ? (BY[id] || SKINS[0]) : id;
-    var wide = obj.pet || (obj.bk && obj.bk.b === 'wings');
-    draw(c, obj, obj.pet ? px * 0.43 : px / 2, px * 0.97, px * (wide ? 0.74 : 0.84), { back: opts && opts.back });
+    var wide = obj.pet || obj.petObj || (obj.bk && obj.bk.b === 'wings');
+    draw(c, obj, (obj.pet || obj.petObj) ? px * 0.4 : px / 2, px * 0.97, px * (wide ? 0.74 : 0.84), { back: opts && opts.back });
     return (cache[key] = cv.toDataURL());
   }
 
-  window.Blocky = { SKINS: SKINS, BOSSES: BOSSES, BY: BY, draw: draw, img: img, ITEMS: ITEMS, IT: IT, SLOTS: SLOTS, RARITY: RARITY, compose: compose };
+  window.Blocky = { PETS: PETS, PET_STARTERS: PET_STARTERS, PET_SLOTS: PET_SLOTS, drawPet: drawPet, petImg: petImg, SKINS: SKINS, BOSSES: BOSSES, BY: BY, draw: draw, img: img, ITEMS: ITEMS, IT: IT, SLOTS: SLOTS, RARITY: RARITY, compose: compose };
 })();

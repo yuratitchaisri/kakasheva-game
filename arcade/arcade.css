@@ -269,3 +269,31 @@ img.av { vertical-align: middle; image-rendering: auto; }
 @keyframes flipc { 0% { transform: scaleX(1); } 50% { transform: scaleX(.05); } 100% { transform: scaleX(1); } }
 .chint { position: absolute; left: 50%; transform: translateX(-50%); bottom: 14px; z-index: 3; font-size: clamp(18px, 2.6vw, 26px); font-weight: 900; color: #fff;
   background: rgba(124,58,237,.88); padding: 8px 20px; border-radius: 999px; white-space: nowrap; }
+
+/* ---------- สัตว์เลี้ยง (เฟส 2) ---------- */
+.advpet { background: linear-gradient(180deg, #fde68a, #f59e0b); color: #422006; box-shadow: 0 6px 0 #b45309, 0 10px 18px rgba(0,0,0,.2); gap: 6px; padding: 8px 16px; }
+.advpet span { display: flex; flex-direction: column; font-size: 20px; line-height: 1.1; text-align: left; }
+.advpet small { font-size: 13px; opacity: .85; }
+.pstart { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+.pstart button, .pnames button { background: #fff; border: 4px solid #fde68a; border-radius: 22px; padding: 8px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 5px 0 #f59e0b; font-size: 18px; color: #2b2350; }
+.pstart button:active, .pnames button:active { transform: translateY(3px); }
+.pnames { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 8px 0; }
+.pnames button { flex-direction: row; padding: 8px 16px; font-weight: 800; }
+.pprev .pname { font-size: 26px; font-weight: 900; margin-top: 6px; }
+.pprev .pstage { font-size: 17px; color: #6b5ca5; font-weight: 700; }
+.pbar { height: 14px; background: #ede9fe; border-radius: 99px; overflow: hidden; margin: 8px 6px 4px; }
+.pbar i { display: block; height: 100%; background: linear-gradient(90deg, #f59e0b, #facc15); }
+.pprog { font-size: 16px; }
+.pshield { margin-top: 8px; font-size: 15px; font-weight: 800; color: #0369a1; background: #e0f2fe; border-radius: 14px; padding: 6px; }
+.pshield.off { color: #64748b; background: #f1f5f9; }
+.petup { margin: 8px auto; padding: 8px 12px; border-radius: 22px; background: #fffbeb; border: 4px solid #f59e0b; max-width: 380px; animation: pop .4s ease-out; }
+.petline { margin: 6px auto; font-size: 17px; background: #fffbeb; border-radius: 14px; padding: 4px 10px; max-width: 460px; }
+.petline img { vertical-align: middle; }
+@media (max-width: 560px) { .pstart { grid-template-columns: repeat(2, 1fr); } }
+
+.rewards { display: flex; gap: 10px; align-items: stretch; justify-content: center; flex-wrap: wrap; }
+.rewards > .petup, .rewards > .loot { flex: 1 1 200px; margin: 6px 0; max-width: 280px; }
+.rewards .petline { flex-basis: 100%; }
+.petup .lnew { font-size: 20px; font-weight: 900; color: #b45309; }
+.petup .lname { font-size: 18px; font-weight: 900; }
+.panel .stars { font-size: 42px; }
