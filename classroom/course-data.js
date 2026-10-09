@@ -309,5 +309,33 @@ var COURSES = [
         { no: 3, min: 35, link: "https://drive.google.com/file/d/17WwarcmLRwosmo_0FjdTplmG6mNsrWai/view", file: "kruton/p2/TA2-101/ตอนย่อย/TA 2 101 ป.2 เรียนครั้งที่ 9 วันที่ 20 กันยายน 2569 ตอน 3 จาก 3.mp4" }
       ] }
     ]
+  },
+  {
+    id: "TA 3 101 ป.2",
+    child: "Kaka",
+    label: "กาก้า · TA 3 101 (เทอม 3)",
+    course: "TA 3 101 ป.2 คณิตศาสตร์ แข่งขัน ปี 2569",
+    docGroups: [
+      { title: "เอกสารเรียน (ใช้ทั้งคอร์ส)", docs: [
+        { name: "ชุดที่ 1", link: "https://drive.google.com/file/d/1e85U7kXElsTdV-vvHJcYLopZ22eusBfN/view", file: "kruton/p2/TA3-101/TA 3 101 ป.2 เอกสารเรียน ชุดที่ 1.pdf" },
+        { name: "ชุดที่ 2", link: "https://drive.google.com/file/d/17S_tMe8Stoe_af0WB5F-fsSKyjwTd3m9/view", file: "kruton/p2/TA3-101/TA 3 101 ป.2 เอกสารเรียน ชุดที่ 2.pdf" }
+      ] },
+      { title: "การบ้านเสริม", docs: [
+        { name: "การบ้านเสริม ครั้งที่ 1", link: "https://drive.google.com/file/d/1pJRQCYJpQ7cm5fgl2FStHxBs9sh2H9k1/view", file: "kruton/p2/TA3-101/TA 3 101 ป.2 การบ้านเสริม ครั้งที่ 1.pdf" },
+        { name: "การบ้านเสริม ครั้งที่ 2", link: "https://drive.google.com/file/d/1UATrR8d-mpYrrlqPAwTAzisUmyUCKENL/view", file: "kruton/p2/TA3-101/TA 3 101 ป.2 การบ้านเสริม ครั้งที่ 2.pdf" }
+      ] }
+    ],
+    episodes: [
+      { no: 1, date: "26 ก.ย. 2569", link: "https://drive.google.com/file/d/13i2p3Za2eZhOlzXgMrmFhJy8_-jKwxu-/view", file: "kruton/p2/TA3-101/TA 3 101 ป.2 เรียนครั้งที่ 1 วันที่ 26 กันยายน 2569.mp4", docs: [], parts: [
+        { no: 1, min: 37, link: "https://drive.google.com/file/d/1-iGu3BmkcrzT0qqNqgRLjnhWO_PWvUW-/view", file: "kruton/p2/TA3-101/ตอนย่อย/TA 3 101 ป.2 เรียนครั้งที่ 1 วันที่ 26 กันยายน 2569 ตอน 1 จาก 3.mp4" },
+        { no: 2, min: 41, link: "https://drive.google.com/file/d/17UuQRp5OzFtiqWmRqsdtMDuLsFib7Prv/view", file: "kruton/p2/TA3-101/ตอนย่อย/TA 3 101 ป.2 เรียนครั้งที่ 1 วันที่ 26 กันยายน 2569 ตอน 2 จาก 3.mp4" },
+        { no: 3, min: 37, link: "https://drive.google.com/file/d/1Ifc68ZdBNzxOeJFn0Pm4s_NUYEtfzK2t/view", file: "kruton/p2/TA3-101/ตอนย่อย/TA 3 101 ป.2 เรียนครั้งที่ 1 วันที่ 26 กันยายน 2569 ตอน 3 จาก 3.mp4" }
+      ] },
+      { no: 2, date: "3 ต.ค. 2569", link: "https://drive.google.com/file/d/1w42Ue6GljRuLfMGffTdbG12Ms12Z4a2e/view", file: "kruton/p2/TA3-101/TA 3 101 ป.2 เรียนครั้งที่ 2 วันที่ 3 ตุลาคม 2569.mp4", docs: [], parts: [
+        { no: 1, min: 36, link: "https://drive.google.com/file/d/1FUODzIYvfWecuDMcWD-3wEQdCZSRiHcv/view", file: "kruton/p2/TA3-101/ตอนย่อย/TA 3 101 ป.2 เรียนครั้งที่ 2 วันที่ 3 ตุลาคม 2569 ตอน 1 จาก 3.mp4" },
+        { no: 2, min: 41, link: "https://drive.google.com/file/d/13ysEn0crC5iO3pwcJHD5UfCF0-FCuyjc/view", file: "kruton/p2/TA3-101/ตอนย่อย/TA 3 101 ป.2 เรียนครั้งที่ 2 วันที่ 3 ตุลาคม 2569 ตอน 2 จาก 3.mp4" },
+        { no: 3, min: 38, link: "https://drive.google.com/file/d/1DL0JSFxE-HUH5hnge_e0aQVhhMyqh_NW/view", file: "kruton/p2/TA3-101/ตอนย่อย/TA 3 101 ป.2 เรียนครั้งที่ 2 วันที่ 3 ตุลาคม 2569 ตอน 3 จาก 3.mp4" }
+      ] }
+    ]
   }
 ];
