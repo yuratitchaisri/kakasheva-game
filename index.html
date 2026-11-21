@@ -56,6 +56,17 @@
       <div class="kids" id="kids"></div>
     </a>
 
+    <a class="card" href="lessons/">
+      <div class="head">
+        <span class="emoji">🎬</span>
+        <div>
+          <h2>สื่อการเรียนรู้</h2>
+          <div class="sub" id="lessonSub">คลิปสอน + ใบสอน 1 หน้า</div>
+        </div>
+        <span class="go">›</span>
+      </div>
+    </a>
+
     <a class="card" href="game.html">
       <div class="head">
         <span class="emoji">🏃</span>
@@ -68,6 +79,15 @@
     </a>
   </main>
 
+  <script src="lessons/lessons-data.js"></script>
+  <script>
+    (function () {
+      if (typeof LESSONS === "undefined" || !LESSONS.length) return;
+      var l = LESSONS[LESSONS.length - 1];
+      document.getElementById("lessonSub").textContent =
+        "ใหม่: " + l.grade + " สอบครั้งที่ " + l.exam + " · " + l.subject + " — " + l.title + (l.minutes ? " (คลิป " + l.minutes + " นาที)" : "");
+    })();
+  </script>
   <script src="classroom/course-data.js"></script>
   <script>
     // อ่านความคืบหน้าเดียวกับหน้า classroom/ (localStorage ksl_classroom_v1 — โดเมนเดียวกัน)

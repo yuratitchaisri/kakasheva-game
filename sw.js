@@ -1,8 +1,10 @@
 /* Service Worker — เล่นออฟไลน์ได้ (cache แบบ stale-while-revalidate) */
-var CACHE = "ksl-cache-v18";   // ⚠️ ต้องบวกเลขทุกครั้งที่แก้ app.js / quizzes.js ไม่งั้นเครื่องที่ติดตั้ง PWA จะเห็นของเก่า
+var CACHE = "ksl-cache-v19";   // ⚠️ ต้องบวกเลขทุกครั้งที่แก้ app.js / quizzes.js ไม่งั้นเครื่องที่ติดตั้ง PWA จะเห็นของเก่า
 var ASSETS = [
   "./",
   "index.html",
+  "lessons/index.html",
+  "lessons/lessons-data.js",
   "game.html",
   "game-old.html",
   "arcade/arcade.css",
