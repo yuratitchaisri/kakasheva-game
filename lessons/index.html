@@ -36,6 +36,10 @@
     .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
     .chip { background: #E6F2EF; color: #2E7D6B; border-radius: 999px; padding: 2px 11px; font-size: 13px; font-weight: bold; }
     .desc { color: #5B6B67; font-size: 15px; margin-bottom: 12px; }
+    .part { margin-top: 14px; }
+    .part .pt { font-size: 17px; margin-bottom: 6px; }
+    .part .pt b { background: #FFE9B8; color: #7A5200; border-radius: 999px; padding: 2px 11px; margin-right: 4px; }
+    .part .pt span { color: #8A9894; font-size: 13px; }
     video { width: 100%; border-radius: 12px; background: #000; display: block; }
     .links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
     .links a { background: #2E7D6B; color: #fff; text-decoration: none; border-radius: 10px; padding: 8px 14px; font-size: 15px; }
@@ -66,6 +70,16 @@
       function sumMin(list) {
         var s = 0; list.forEach(function (l) { var m = /^(\d+):(\d+)$/.exec(l.minutes || ""); if (m) s += +m[1] * 60 + +m[2]; });
         return s ? Math.round(s / 60) + " นาที" : "";
+      }
+      // คลิปที่แบ่งเป็นตอน: l.parts = [{title, video, minutes}] (ตอนละ 3–5 นาที เด็กดูจบทีละตอน) · ไม่มี parts = คลิปเดียว l.video
+      function vid(src, poster) {
+        return '<video controls playsinline preload="none"' + (poster ? ' poster="' + esc(poster) + '"' : "") + ' src="' + esc(src) + '"></video>';
+      }
+      function videos(l) {
+        if (!l.parts) return l.video ? vid(l.video, l.poster) : "";
+        return l.parts.map(function (p, k) {
+          return '<div class="part"><div class="pt"><b>ตอนที่ ' + (k + 1) + "</b> " + esc(p.title) + (p.minutes ? ' <span>⏱ ' + esc(p.minutes) + " นาที</span>" : "") + "</div>" + vid(p.video, p.poster || l.poster) + "</div>";
+        }).join("");
       }
       // state ใน URL hash: #g=ป.2&e=2569-3&s=คณิตศาสตร์  (ปุ่มย้อนกลับใช้ได้ · ส่งลิงก์ต่อได้)
       function readHash() {
@@ -125,13 +139,14 @@
           h += items.map(function (l, i) {
             return '<section class="lesson" id="' + esc(l.id) + '">' +
               '<div class="chips"><span class="chip">คลิปที่ ' + (i + 1) + "</span>" + (l.chapter ? '<span class="chip">' + esc(l.chapter) + "</span>" : "") +
-              (l.minutes ? '<span class="chip">⏱ ' + esc(l.minutes) + " นาที</span>" : "") + "</div>" +
+              (l.minutes ? '<span class="chip">⏱ ' + esc(l.minutes) + " นาที</span>" : "") + (l.parts ? '<span class="chip">' + l.parts.length + " ตอน</span>" : "") + "</div>" +
               "<h3>" + esc(l.emoji || "") + " " + esc(l.title) + "</h3>" +
               '<div class="desc">' + esc(l.desc) + "</div>" +
-              (l.video ? '<video controls playsinline preload="none"' + (l.poster ? ' poster="' + esc(l.poster) + '"' : "") + ' src="' + esc(l.video) + '"></video>' : "") +
+              videos(l) +
               '<div class="links">' +
               (l.sheet ? '<a href="' + esc(l.sheet) + '" target="_blank" rel="noopener">📄 ' + esc(l.sheetLabel || "ใบสอน") + "</a>" : "") +
-              (l.video ? '<a class="alt" href="' + esc(l.video) + '" download>⬇️ โหลดคลิป</a>' : "") +
+              (l.parts ? l.parts.map(function (p, k) { return '<a class="alt" href="' + esc(p.video) + '" download>⬇️ โหลดตอนที่ ' + (k + 1) + "</a>"; }).join("") :
+                l.video ? '<a class="alt" href="' + esc(l.video) + '" download>⬇️ โหลดคลิป</a>' : "") +
               "</div>" + '<div class="muted">เพิ่มเมื่อ ' + esc(l.added) + "</div></section>";
           }).join("");
         }
