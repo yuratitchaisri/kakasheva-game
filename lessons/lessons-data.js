@@ -185,5 +185,181 @@ var LESSONS = [
       { title: "ดูแลดวงตาให้ปลอดภัย", video: "media/p2-exam3-sci-eye-3.mp4", minutes: "2:08" }
     ], poster: "media/p2-exam3-sci-eye-poster.jpg", minutes: "8:12",
     added: "22 พ.ย. 2569"
+  },
+  {
+    id: "p1-exam3-thai-finals", child: "Sheva", grade: "ป.1", year: 2569, exam: 3,
+    subject: "ภาษาไทย", chapter: "หลักภาษาไทย", title: "มาตราตัวสะกด · กระจายคำ", emoji: "🏠",
+    desc: "แม่ ก กา · ตัวสะกดคืออะไร · 8 มาตรา กก กด กบ กง กน กม เกย เกอว · กับดัก ว ในสระอัว · กระจายคำเป็นตาราง · อ่านคำใหม่",
+    video: "media/p1-exam3-thai-finals-1.mp4",
+    parts: [
+      { title: "แม่ ก กา และตัวสะกด", video: "media/p1-exam3-thai-finals-1.mp4", minutes: "2:13" },
+      { title: "มาตราตัวสะกด 8 แม่", video: "media/p1-exam3-thai-finals-2.mp4", minutes: "3:29" },
+      { title: "กระจายคำ และอ่านคำใหม่", video: "media/p1-exam3-thai-finals-3.mp4", minutes: "3:15" }
+    ], poster: "media/p1-exam3-thai-finals-poster.jpg", minutes: "8:57",
+    added: "27 พ.ย. 2569"
+  },
+  {
+    id: "p1-exam3-thai-phasaphathi", child: "Sheva", grade: "ป.1", year: 2569, exam: 3,
+    subject: "ภาษาไทย", chapter: "ภาษาพาที บทที่ 7–9", title: "เพื่อนรัก เพื่อนเล่น · พูดเพราะ · เกือบไป", emoji: "🐘",
+    desc: "ภูผากับลูกช้างใบโบก ใบบัว · เสียงกระดึงกระพรวน · ควาญโพบอกว่าช้างชอบคนพูดเพราะ · งูแผ่แม่เบี้ยขวางทาง · คำใหม่ในบท",
+    video: "media/p1-exam3-thai-phasaphathi-1.mp4",
+    parts: [
+      { title: "บทที่ 7 เพื่อนรัก เพื่อนเล่น", video: "media/p1-exam3-thai-phasaphathi-1.mp4", minutes: "2:50" },
+      { title: "บทที่ 8 พูดเพราะ", video: "media/p1-exam3-thai-phasaphathi-2.mp4", minutes: "2:54" },
+      { title: "บทที่ 9 เกือบไป", video: "media/p1-exam3-thai-phasaphathi-3.mp4", minutes: "3:04" }
+    ], poster: "media/p1-exam3-thai-phasaphathi-poster.jpg", minutes: "8:48",
+    added: "27 พ.ย. 2569"
+  },
+  {
+    id: "p1-exam3-thai-darun", child: "Sheva", grade: "ป.1", year: 2569, exam: 3,
+    subject: "ภาษาไทย", chapter: "ดรุณศึกษา บทที่ 37 · 45", title: "นกเขาเปล้า · นายสุข · อ่านเรื่องนอกบทเรียน", emoji: "🕊️",
+    desc: "นกช่วยมดเพราะเมตตา มดช่วยนกเพราะกตัญญู · นายสุขสุภาพ มีน้ำใจ ได้รูปถ่าย · อ่านเรื่องที่ไม่เคยอ่าน: ใคร ทำอะไร ที่ไหน เพราะอะไร",
+    video: "media/p1-exam3-thai-darun-1.mp4",
+    parts: [
+      { title: "บทที่ 37 นกเขาเปล้า", video: "media/p1-exam3-thai-darun-1.mp4", minutes: "3:11" },
+      { title: "บทที่ 45 นายสุข", video: "media/p1-exam3-thai-darun-2.mp4", minutes: "3:42" },
+      { title: "อ่านเรื่องนอกบทเรียน", video: "media/p1-exam3-thai-darun-3.mp4", minutes: "2:56" }
+    ], poster: "media/p1-exam3-thai-darun-poster.jpg", minutes: "9:49",
+    added: "27 พ.ย. 2569"
+  },
+  {
+    id: "p1-exam3-math-position-shapes", child: "Sheva", grade: "ป.1", year: 2569, exam: 3,
+    subject: "คณิตศาสตร์", chapter: "บทที่ 7–8", title: "ตำแหน่ง · อันดับที่ · รูปเรขาคณิต", emoji: "🔺",
+    desc: "คนแรก คนสุดท้าย · ข้างหน้า ข้างหลัง ระหว่าง · ซ้าย ขวา · อันดับที่ · ทรง 3 มิติ 4 แบบ · รูป 2 มิติ ด้าน มุม",
+    video: "media/p1-exam3-math-position-shapes-1.mp4",
+    parts: [
+      { title: "ตำแหน่ง และ อันดับที่", video: "media/p1-exam3-math-position-shapes-1.mp4", minutes: "3:34" },
+      { title: "รูปเรขาคณิต 3 มิติ", video: "media/p1-exam3-math-position-shapes-2.mp4", minutes: "3:14" },
+      { title: "รูปเรขาคณิต 2 มิติ", video: "media/p1-exam3-math-position-shapes-3.mp4", minutes: "3:44" }
+    ], poster: "media/p1-exam3-math-position-shapes-poster.jpg", minutes: "10:32",
+    added: "27 พ.ย. 2569"
+  },
+  {
+    id: "p1-exam3-math-numbers", child: "Sheva", grade: "ป.1", year: 2569, exam: 3,
+    subject: "คณิตศาสตร์", chapter: "บทที่ 9–10", title: "จำนวนถึง 100 · การบวก การลบ", emoji: "🔢",
+    desc: "ตัวเลขไทย · หลักสิบ หลักหน่วย · รูปกระจาย · มากกว่า น้อยกว่า · เรียงลำดับ · ตั้งบวกทด · ตั้งลบยืม · โจทย์ปัญหา",
+    video: "media/p1-exam3-math-numbers-1.mp4",
+    parts: [
+      { title: "จำนวนถึง 100", video: "media/p1-exam3-math-numbers-1.mp4", minutes: "3:00" },
+      { title: "มากกว่า น้อยกว่า เรียงลำดับ", video: "media/p1-exam3-math-numbers-2.mp4", minutes: "2:55" },
+      { title: "บวก ลบ และโจทย์ปัญหา", video: "media/p1-exam3-math-numbers-3.mp4", minutes: "4:16" }
+    ], poster: "media/p1-exam3-math-numbers-poster.jpg", minutes: "10:10",
+    added: "27 พ.ย. 2569"
+  },
+  {
+    id: "p1-exam3-sci-materials", child: "Sheva", grade: "ป.1", year: 2569, exam: 3,
+    subject: "วิทยาศาสตร์", chapter: "วัตถุและสมบัติของวัสดุ", title: "วัสดุรอบตัวเรา", emoji: "🧸",
+    desc: "ของเล่น · ของใช้ · วัสดุ 8 ชนิด · ทำจากวัสดุชนิดเดียวหรือหลายชนิด · สมบัติของวัสดุ · จัดกลุ่มด้วยเกณฑ์",
+    video: "media/p1-exam3-sci-materials-1.mp4",
+    parts: [
+      { title: "ของเล่น ของใช้ และวัสดุ", video: "media/p1-exam3-sci-materials-1.mp4", minutes: "3:09" },
+      { title: "ชนิดเดียว หลายชนิด และสมบัติของวัสดุ", video: "media/p1-exam3-sci-materials-2.mp4", minutes: "3:32" },
+      { title: "จัดกลุ่มวัสดุ", video: "media/p1-exam3-sci-materials-3.mp4", minutes: "2:46" }
+    ], poster: "media/p1-exam3-sci-materials-poster.jpg", minutes: "9:28",
+    added: "27 พ.ย. 2569"
+  },
+  {
+    id: "p1-exam3-sci-rocks", child: "Sheva", grade: "ป.1", year: 2569, exam: 3,
+    subject: "วิทยาศาสตร์", chapter: "หินในธรรมชาติ", title: "หินรอบตัวเรา", emoji: "⛰️",
+    desc: "แหล่งที่พบหิน · สี รูปทรง เนื้อหิน ลวดลาย รูพรุน น้ำหนัก · ทดสอบความแข็งด้วยการขูด · ประโยชน์ของหิน",
+    video: "media/p1-exam3-sci-rocks-1.mp4",
+    parts: [
+      { title: "หินพบที่ไหน หน้าตาเป็นอย่างไร", video: "media/p1-exam3-sci-rocks-1.mp4", minutes: "2:57" },
+      { title: "ความแข็ง และประโยชน์ของหิน", video: "media/p1-exam3-sci-rocks-2.mp4", minutes: "3:22" }
+    ], poster: "media/p1-exam3-sci-rocks-poster.jpg", minutes: "6:19",
+    added: "27 พ.ย. 2569"
+  },
+  {
+    id: "p1-exam3-mathinter-numbers", child: "Sheva", grade: "ป.1", year: 2569, exam: 3,
+    subject: "Math-Inter", chapter: "Unit 11–14 · Numbers to 100", title: "Numbers to 100 · Add & Subtract", emoji: "🔢",
+    desc: "tens and ones · number words · more than / less than · greatest / smallest · add & subtract · word problems (left, how many more)",
+    video: "media/p1-exam3-mathinter-numbers-1.mp4",
+    parts: [
+      { title: "Tens and Ones", video: "media/p1-exam3-mathinter-numbers-1.mp4", minutes: "2:58" },
+      { title: "Compare and Order", video: "media/p1-exam3-mathinter-numbers-2.mp4", minutes: "3:13" },
+      { title: "Add, Subtract and Word Problems", video: "media/p1-exam3-mathinter-numbers-3.mp4", minutes: "3:58" }
+    ], poster: "media/p1-exam3-mathinter-numbers-poster.jpg", minutes: "10:09",
+    added: "27 พ.ย. 2569"
+  },
+  {
+    id: "p1-exam3-mathinter-time", child: "Sheva", grade: "ป.1", year: 2569, exam: 3,
+    subject: "Math-Inter", chapter: "Unit 15 · Time", title: "Time · o'clock & half past", emoji: "⏰",
+    desc: "hour hand · minute hand · What time is it? · o'clock · half past · อ่านเข็มสั้นให้ถูก",
+    video: "media/p1-exam3-mathinter-time-1.mp4",
+    parts: [
+      { title: "o'clock", video: "media/p1-exam3-mathinter-time-1.mp4", minutes: "2:33" },
+      { title: "half past", video: "media/p1-exam3-mathinter-time-2.mp4", minutes: "3:21" }
+    ], poster: "media/p1-exam3-mathinter-time-poster.jpg", minutes: "5:54",
+    added: "27 พ.ย. 2569"
+  },
+  {
+    id: "p1-exam3-sciinter-plants-colours", child: "Sheva", grade: "ป.1", year: 2569, exam: 3,
+    subject: "Science-Inter", chapter: "Unit 3–4", title: "Growing Plants · Colours", emoji: "🌱",
+    desc: "ส่วนของต้นไม้ (roots stem leaf flower fruit) · เมล็ดโตเป็นต้นไม้ · ต้นไม้ต้องการ 4 อย่าง · 3 สีหลัก · ผสมสีได้ green orange purple",
+    video: "media/p1-exam3-sciinter-plants-colours-1.mp4",
+    parts: [
+      { title: "The Parts of a Plant", video: "media/p1-exam3-sciinter-plants-colours-1.mp4", minutes: "3:10" },
+      { title: "How Plants Grow · What Plants Need", video: "media/p1-exam3-sciinter-plants-colours-2.mp4", minutes: "2:54" },
+      { title: "Colours · Mixing Colours", video: "media/p1-exam3-sciinter-plants-colours-3.mp4", minutes: "2:50" }
+    ], poster: "media/p1-exam3-sciinter-plants-colours-poster.jpg", minutes: "8:54",
+    added: "27 พ.ย. 2569"
+  },
+  {
+    id: "p1-exam3-english", child: "Sheva", grade: "ป.1", year: 2569, exam: 3,
+    subject: "English", chapter: "Unit 7–9", title: "Wild Animals · My Clothes · Can", emoji: "🦁",
+    desc: "What is this? It is a… · What are they? They are… · Is it…? · has got / have got · can / can't · Action words · อ่านเรื่องสั้น",
+    video: "media/p1-exam3-english-1.mp4",
+    parts: [
+      { title: "Wild Animals", video: "media/p1-exam3-english-1.mp4", minutes: "3:05" },
+      { title: "My Clothes · Can / Can't", video: "media/p1-exam3-english-2.mp4", minutes: "3:35" },
+      { title: "Action Words · Reading", video: "media/p1-exam3-english-3.mp4", minutes: "2:59" }
+    ], poster: "media/p1-exam3-english-poster.jpg", minutes: "9:38",
+    added: "27 พ.ย. 2569"
+  },
+  {
+    id: "p2-exam3-mathinter-word-fractions", child: "Kaka", grade: "ป.2", year: 2569, exam: 3,
+    subject: "Math-Inter", chapter: "Unit 7–8", title: "Word Problems & Fractions", emoji: "🧮",
+    desc: "keywords: altogether · left · how many more · fewer · farther · 2-step problems · numerator · denominator · add/subtract fractions",
+    video: "media/p2-exam3-mathinter-word-fractions-1.mp4",
+    parts: [
+      { title: "Keywords บอกว่า บวก หรือ ลบ", video: "media/p2-exam3-mathinter-word-fractions-1.mp4", minutes: "3:09" },
+      { title: "2-step problems โจทย์ 2 ขั้น", video: "media/p2-exam3-mathinter-word-fractions-2.mp4", minutes: "2:49" },
+      { title: "Fractions เศษส่วน", video: "media/p2-exam3-mathinter-word-fractions-3.mp4", minutes: "3:31" }
+    ], poster: "media/p2-exam3-mathinter-word-fractions-poster.jpg", minutes: "9:30",
+    added: "27 พ.ย. 2569"
+  },
+  {
+    id: "p2-exam3-mathinter-shapes", child: "Kaka", grade: "ป.2", year: 2569, exam: 3,
+    subject: "Math-Inter", chapter: "Unit 9", title: "Shapes, Solid Figures & Patterns", emoji: "🔷",
+    desc: "circle · semicircle · quarter circle · square · rectangle · cube · cuboid · sphere · cylinder · cone · corners · what comes next?",
+    video: "media/p2-exam3-mathinter-shapes-1.mp4",
+    parts: [
+      { title: "Shapes รูปแบน ๆ", video: "media/p2-exam3-mathinter-shapes-1.mp4", minutes: "3:22" },
+      { title: "Solid figures & Patterns", video: "media/p2-exam3-mathinter-shapes-2.mp4", minutes: "4:21" }
+    ], poster: "media/p2-exam3-mathinter-shapes-poster.jpg", minutes: "7:43",
+    added: "27 พ.ย. 2569"
+  },
+  {
+    id: "p2-exam3-sciinter-light", child: "Kaka", grade: "ป.2", year: 2569, exam: 3,
+    subject: "Science-Inter", chapter: "Unit 3 Light", title: "Light · Colours · Shadows", emoji: "🌈",
+    desc: "What is light? · Sources of light (natural / artificial) · Light in everyday life · Rainbow 7 colours · Shadows",
+    video: "media/p2-exam3-sciinter-light-1.mp4",
+    parts: [
+      { title: "What is light? · Sources of light", video: "media/p2-exam3-sciinter-light-1.mp4", minutes: "3:38" },
+      { title: "Light and colours · Shadows", video: "media/p2-exam3-sciinter-light-2.mp4", minutes: "4:56" }
+    ], poster: "media/p2-exam3-sciinter-light-poster.jpg", minutes: "8:34",
+    added: "27 พ.ย. 2569"
+  },
+  {
+    id: "p2-exam3-english", child: "Kaka", grade: "ป.2", year: 2569, exam: 3,
+    subject: "English", chapter: "Grammar Units", title: "Present Simple · Farm · Town · Clothes", emoji: "🔤",
+    desc: "Present Simple (+ −) · So do I / I don't · can / can't · Where is/are · How many · Prepositions · has got / have got · Unseen",
+    video: "media/p2-exam3-english-1.mp4",
+    parts: [
+      { title: "Present Simple (+ −)", video: "media/p2-exam3-english-1.mp4", minutes: "3:13" },
+      { title: "At the farm · My town", video: "media/p2-exam3-english-2.mp4", minutes: "3:24" },
+      { title: "Our clothes · Unseen", video: "media/p2-exam3-english-3.mp4", minutes: "3:36" }
+    ], poster: "media/p2-exam3-english-poster.jpg", minutes: "10:13",
+    added: "27 พ.ย. 2569"
   }
 ];
