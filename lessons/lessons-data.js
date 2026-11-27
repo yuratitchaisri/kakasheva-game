@@ -100,9 +100,9 @@ var LESSONS = [
     desc: "พระราชประวัติ · ลำดับพระยศ · พระราชกรณียกิจ 3 ด้าน (ป่า ช้าง เต่า ศิลปาชีพ หมอ)",
     video: "media/p2-exam3-history-queen-1.mp4",
     parts: [
-      { title: "พระราชประวัติและพระยศ", video: "media/p2-exam3-history-queen-1.mp4", minutes: "3:58" },
-      { title: "งานที่ทรงทำเพื่อคนไทย", video: "media/p2-exam3-history-queen-2.mp4", minutes: "3:09" }
-    ], poster: "media/p2-exam3-history-queen-poster.jpg", minutes: "7:07",
+      { title: "พระราชประวัติและพระยศ", video: "media/p2-exam3-history-queen-1.mp4", minutes: "4:03" },
+      { title: "งานที่ทรงทำเพื่อคนไทย", video: "media/p2-exam3-history-queen-2.mp4", minutes: "3:13" }
+    ], poster: "media/p2-exam3-history-queen-poster.jpg", minutes: "7:16",
     added: "21 พ.ย. 2569"
   },
   {
